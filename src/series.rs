@@ -1,0 +1,265 @@
+use crate::{scales::TAI, Time};
+use chrono::TimeDelta;
+
+/// A collection of time values associated with a specific time scale.
+///
+/// Values retain the order in which they were supplied. Use [`Self::duration`]
+/// to measure the physical span between the earliest and latest values,
+/// regardless of their stored order.
+///
+/// # Examples
+///
+/// ```
+/// use anytime::{Time, TimeSeries, scales::TAI};
+/// use chrono::TimeDelta;
+///
+/// let series = TimeSeries::from_range(
+///     Time::<TAI>::from_jd(2_451_545.0),
+///     Time::<TAI>::from_jd(2_451_548.0),
+///     TimeDelta::days(1),
+/// );
+/// assert_eq!(series.len(), 3);
+/// ```
+#[derive(Debug)]
+pub struct TimeSeries<S> {
+    times: Vec<Time<S>>,
+}
+
+/// A lazily generated range of times with an exclusive end bound.
+///
+/// Create one with [`TimeSeries::range_iter`]. The iterator yields the start
+/// value when it is on the correct side of the end value, then advances by its
+/// step until the exclusive bound is reached.
+#[derive(Debug)]
+pub struct TimeSeriesRange<S> {
+    next: Option<Time<S>>,
+    end: Time<S>,
+    step: TimeDelta,
+}
+
+impl<S> TimeSeries<S> {
+    /// Creates a series from time values in their supplied order.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use anytime::{Time, TimeSeries, scales::TAI};
+    ///
+    /// let series = TimeSeries::new(vec![
+    ///     Time::<TAI>::from_jd(2_451_545.0),
+    ///     Time::<TAI>::from_jd(2_451_546.0),
+    /// ]);
+    /// assert_eq!(series.len(), 2);
+    /// ```
+    pub fn new(times: Vec<Time<S>>) -> Self {
+        Self { times }
+    }
+
+    /// Returns the number of time values in the series.
+    pub fn len(&self) -> usize {
+        self.times.len()
+    }
+
+    /// Returns whether the series contains no time values.
+    pub fn is_empty(&self) -> bool {
+        self.times.is_empty()
+    }
+
+    /// Returns the first time in the series.
+    pub fn first(&self) -> Option<&Time<S>> {
+        self.times.first()
+    }
+
+    /// Returns the final time in the series.
+    pub fn last(&self) -> Option<&Time<S>> {
+        self.times.last()
+    }
+
+    /// Returns the time values in their stored order.
+    pub fn as_slice(&self) -> &[Time<S>] {
+        &self.times
+    }
+
+    /// Iterates over the time values in their stored order.
+    pub fn iter(&self) -> std::slice::Iter<'_, Time<S>> {
+        self.times.iter()
+    }
+
+    /// Returns the elapsed physical duration from the earliest to latest time.
+    ///
+    /// Empty and singleton series have zero duration.
+    pub fn duration(&self) -> TimeDelta
+    where
+        Time<S>: Into<Time<TAI>>,
+    {
+        let Some(first) = self.times.first() else {
+            return TimeDelta::zero();
+        };
+
+        let (earliest, latest) =
+            self.times
+                .iter()
+                .skip(1)
+                .fold((first, first), |(earliest, latest), time| {
+                    (
+                        if time < earliest { time } else { earliest },
+                        if time > latest { time } else { latest },
+                    )
+                });
+
+        latest.clone() - earliest.clone()
+    }
+}
+
+impl<S> IntoIterator for TimeSeries<S> {
+    type Item = Time<S>;
+    type IntoIter = std::vec::IntoIter<Time<S>>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.times.into_iter()
+    }
+}
+
+impl<S: crate::Scale> Iterator for TimeSeriesRange<S> {
+    type Item = Time<S>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let current = self.next.take()?;
+        self.next = current
+            .value
+            .checked_add(&self.step)
+            .map(Time::new)
+            .filter(|next| {
+                if self.step > TimeDelta::zero() {
+                    next < &self.end
+                } else {
+                    next > &self.end
+                }
+            });
+        Some(current)
+    }
+}
+
+impl<S: crate::Scale> TimeSeries<S> {
+    /// Lazily generates a range with an exclusive end bound.
+    ///
+    /// Positive steps generate ascending ranges and negative steps generate
+    /// descending ranges. A range whose step points away from its end is empty.
+    ///
+    /// # Panics
+    ///
+    /// Panics if `step` is zero.
+    pub fn range_iter(start: Time<S>, end: Time<S>, step: TimeDelta) -> TimeSeriesRange<S> {
+        assert_ne!(step, TimeDelta::zero(), "time series step must not be zero");
+
+        let has_values = if step > TimeDelta::zero() {
+            start < end
+        } else {
+            start > end
+        };
+
+        TimeSeriesRange {
+            next: has_values.then_some(start),
+            end,
+            step,
+        }
+    }
+
+    /// Creates a range with an exclusive end bound.
+    ///
+    /// This is the eager counterpart to [`Self::range_iter`].
+    pub fn from_range(start: Time<S>, end: Time<S>, step: TimeDelta) -> Self {
+        Self {
+            times: Self::range_iter(start, end, step).collect(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::scales::{TAI, UTC};
+
+    fn tai(seconds: i64) -> Time<TAI> {
+        Time::new(TimeDelta::seconds(seconds))
+    }
+
+    #[test]
+    fn new_preserves_time_order() {
+        let empty = TimeSeries::<TAI>::new(vec![]);
+        assert!(empty.is_empty());
+        assert_eq!(empty.first(), None);
+        assert_eq!(empty.last(), None);
+        assert_eq!(empty.duration(), TimeDelta::zero());
+        let series = TimeSeries::new(vec![tai(2), tai(0), tai(1)]);
+
+        assert_eq!(series.as_slice(), &[tai(2), tai(0), tai(1)]);
+        assert_eq!(series.duration(), TimeDelta::seconds(2));
+    }
+
+    #[test]
+    fn range_is_ascending_and_has_a_duration() {
+        let series = TimeSeries::from_range(tai(0), tai(3), TimeDelta::seconds(1));
+
+        assert_eq!(series.len(), 3);
+        assert_eq!(series.duration(), TimeDelta::seconds(2));
+        assert_eq!(series.as_slice(), &[tai(0), tai(1), tai(2)]);
+    }
+
+    #[test]
+    fn range_allows_a_single_time() {
+        let series = TimeSeries::from_range(tai(0), tai(1), TimeDelta::seconds(2));
+
+        assert_eq!(series.len(), 1);
+        assert_eq!(series.duration(), TimeDelta::zero());
+        assert_eq!(series.first(), Some(&tai(0)));
+        assert_eq!(series.last(), Some(&tai(0)));
+    }
+
+    #[test]
+    fn range_iter_generates_times_lazily() {
+        let mut range = TimeSeries::range_iter(tai(0), tai(3), TimeDelta::seconds(1));
+
+        assert_eq!(range.next(), Some(tai(0)));
+        assert_eq!(range.collect::<Vec<_>>(), vec![tai(1), tai(2)]);
+    }
+
+    #[test]
+    fn range_is_empty_when_step_points_away_from_end() {
+        let ascending = TimeSeries::from_range(tai(1), tai(0), TimeDelta::seconds(1));
+        let descending = TimeSeries::from_range(tai(0), tai(1), TimeDelta::seconds(-1));
+
+        assert!(ascending.is_empty());
+        assert!(descending.is_empty());
+    }
+
+    #[test]
+    fn range_supports_negative_steps() {
+        let series = TimeSeries::from_range(tai(3), tai(0), TimeDelta::seconds(-1));
+
+        assert_eq!(series.as_slice(), &[tai(3), tai(2), tai(1)]);
+        assert_eq!(series.duration(), TimeDelta::seconds(2));
+    }
+
+    #[test]
+    #[should_panic(expected = "time series step must not be zero")]
+    fn range_rejects_zero_step() {
+        TimeSeries::range_iter(tai(0), tai(1), TimeDelta::zero());
+    }
+
+    #[test]
+    fn series_converts_scales() {
+        let series = TimeSeries::new(vec![tai(0), tai(1)]);
+        let utc: TimeSeries<UTC> = series.into();
+
+        assert_eq!(utc.len(), 2);
+        assert_eq!(utc.duration(), TimeDelta::seconds(1));
+    }
+
+    #[test]
+    fn series_iterates_by_reference_and_value() {
+        let series = TimeSeries::new(vec![tai(0), tai(1)]);
+        assert_eq!(series.iter().count(), 2);
+        assert_eq!(series.into_iter().count(), 2);
+    }
+}

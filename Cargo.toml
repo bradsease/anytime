@@ -1,0 +1,17 @@
+[package]
+name = "anytime"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+authors = ["Brad Sease <contact@bradsease.com>"]
+description = "Ergonomic astronomical timescales in rust"
+license = "MIT"
+repository = "https://github.com/bradsease/anytime"
+homepage = "https://github.com/bradsease/anytime"
+documentation = "https://docs.rs/anytime"
+readme = "README.md"
+keywords = ["astronomy", "time", "timescales", "utc", "tai"]
+categories = ["date-and-time", "science"]
+
+[dependencies]
+chrono = { version = ">=0.4.34, <0.5", default-features = false }
