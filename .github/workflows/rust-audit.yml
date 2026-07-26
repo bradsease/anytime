@@ -2,6 +2,8 @@ name: Rust Security Audit
 
 on:
   push:
+    branches:
+      - main
     paths:
       - '**/Cargo.toml'
       - '**/Cargo.lock'
