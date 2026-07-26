@@ -8,8 +8,41 @@
 //! use anytime::{Time, scales::{TAI, UTC}};
 //!
 //! let utc = Time::<UTC>::from_jd(2_451_545.0);
-//! let tai: Time<TAI> = utc.clone().into();
-//! assert_eq!(tai.utc(), utc);
+//! let tai: Time<TAI> = utc.into();
+//! # assert_eq!(tai.utc().jd(), 2_451_545.0);
+//! ```
+//!
+//! Values can also be compared and differenced directly, even when they use
+//! different scales. Subtraction returns a `chrono::TimeDelta`, while
+//! comparisons use standard ordering operators:
+//!
+//! ```
+//! use anytime::{Time, scales::{TAI, UTC}};
+//! use chrono::TimeDelta;
+//!
+//! let earlier = Time::<UTC>::from_jd(2_451_545.0);
+//! let later: Time<TAI> = Time::<UTC>::from_jd(2_451_546.0).into();
+//! let is_ordered = earlier < later;
+//! let difference = later - earlier;
+//! # assert!(is_ordered);
+//! # assert_eq!(difference, TimeDelta::seconds(86_400));
+//! ```
+//!
+//! A value can be formatted as a Gregorian date string, including sub-second
+//! precision, through [`Time::gregorian`]:
+//!
+//! ```
+//! use anytime::{Time, scales::UTC};
+//! use chrono::NaiveDate;
+//!
+//! let date = NaiveDate::from_ymd_opt(2000, 1, 1)
+//!     .unwrap()
+//!     .and_hms_nano_opt(12, 0, 0, 123_456_789)
+//!     .unwrap();
+//! let date_string = Time::<UTC>::from_gregorian(date)
+//!     .gregorian()
+//!     .to_string();
+//! # assert_eq!(date_string, "2000-01-01 12:00:00.123456789");
 //! ```
 //!
 //! The crate supports UTC, TAI, GPST, TT, TCG, and UT1. UTC conversions use
@@ -18,10 +51,12 @@
 //!
 //! # Feature overview
 //!
-//! - Use [`Time::from_jd`], [`Time::from_mjd`], or [`Time::from_gregorian`]
-//!   to construct a value.
-//! - Use [`Time::utc`], [`Time::tai`], and the other scale methods to convert
-//!   values.
+//! - Use [`Time::from_jd`], [`Time::from_mjd`], [`Time::from_split_jd`], or
+//!   [`Time::from_gregorian`] to construct a value.
+//! - Use [`Time::jd`], [`Time::mjd`], [`Time::split_jd`], or
+//!   [`Time::gregorian`] to inspect a value.
+//! - Use the `From`/`Into` implementations or [`Time::utc`], [`Time::tai`], and
+//!   the other scale methods to convert values.
 //! - Use [`TimeSeries`] for stored collections or [`TimeSeries::range_iter`]
 //!   for lazy ranges.
 //! - Use [`AnyTime`] when a collection may contain values from multiple scales.

@@ -14,6 +14,7 @@
 - Verify the minimum supported Rust version with `cargo test --locked --workspace --all-features --all-targets` using Rust 1.70.
 - Use rustfmt for all Rust formatting; do not introduce unrelated formatting changes.
 - Update the relevant documentation and doctests when adding features or changing public interfaces; do not make unrelated documentation changes.
+- Keep the README examples synchronized with the corresponding examples in `src/lib.rs`.
 - Keep astronomical reference data and validation outputs consistent when changing time-scale or Earth-orientation calculations.
 
 ## Pull Requests
