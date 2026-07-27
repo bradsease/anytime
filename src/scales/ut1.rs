@@ -1,6 +1,6 @@
 use crate::eop::sample_ut1_minus_utc;
 use crate::macros::{impl_from_anytime, impl_time_series_from};
-use crate::scales::{GPST, TAI, TCG, TT, UTC};
+use crate::scales::{GPST, TAI, TCG, TDB, TT, UTC};
 use crate::{Scale, Time};
 
 /// Universal Time 1, an Earth-rotation time scale based on observed UT1-UTC
@@ -42,6 +42,14 @@ impl From<Time<TCG>> for Time<UT1> {
 }
 impl_time_series_from!(TCG => UT1);
 
+impl From<Time<TDB>> for Time<UT1> {
+    fn from(tdb: Time<TDB>) -> Self {
+        let utc: Time<UTC> = tdb.into();
+        utc.into()
+    }
+}
+impl_time_series_from!(TDB => UT1);
+
 impl From<Time<TT>> for Time<UT1> {
     fn from(tt: Time<TT>) -> Self {
         let utc: Time<UTC> = tt.into();
@@ -82,6 +90,7 @@ mod tests {
         assert_round_trip::<GPST, UT1>(Time::<GPST>::from_jd(2_457_754.5));
         assert_round_trip::<TAI, UT1>(Time::<TAI>::from_jd(2_457_754.5));
         assert_round_trip::<TCG, UT1>(Time::<TCG>::from_jd(2_457_754.5));
+        assert_round_trip::<TDB, UT1>(Time::<TDB>::from_jd(2_457_754.5));
         assert_round_trip::<TT, UT1>(Time::<TT>::from_jd(2_457_754.5));
         assert_round_trip::<UTC, UT1>(Time::<UTC>::from_jd(2_457_754.5));
     }

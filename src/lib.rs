@@ -45,7 +45,7 @@
 //! # assert_eq!(date_string, "2000-01-01 12:00:00.123456789");
 //! ```
 //!
-//! The crate supports UTC, TAI, GPST, TT, TCG, and UT1. UTC conversions use
+//! The crate supports UTC, TAI, GPST, TT, TCG, TDB, and UT1. UTC conversions use
 //! leap-second data built into the crate. UT1 conversions additionally use
 //! Earth-orientation data loaded with [`load_finals2000a`].
 //!
@@ -77,6 +77,6 @@ mod time;
 
 pub use anytime::{AnyTime, AnyTimeVec};
 pub use eop::{load_finals2000a, FinalsLoadError};
-pub use scales::{GPS, GPST, TAI, TCG, TDT, TT, UT, UT1, UTC};
+pub use scales::{GPS, GPST, TAI, TCG, TDB, TDT, TT, UT, UT1, UTC};
 pub use series::{TimeSeries, TimeSeriesRange};
 pub use time::{Scale, Time};

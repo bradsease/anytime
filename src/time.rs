@@ -282,6 +282,7 @@ impl<S> Ord for Time<S> {
 impl_to_scale!(scales::GPST, gpst);
 impl_to_scale!(scales::TAI, tai);
 impl_to_scale!(scales::TCG, tcg);
+impl_to_scale!(scales::TDB, tdb);
 impl_to_scale!(scales::TT, tt);
 impl_to_scale!(scales::UT1, ut1);
 impl_to_scale!(scales::UTC, utc);
