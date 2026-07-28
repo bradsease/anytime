@@ -16,16 +16,12 @@ struct Term {
 
 include!(concat!(env!("OUT_DIR"), "/fb2001.rs"));
 
-fn terms() -> &'static [Term] {
-    TERMS
-}
-
 fn tdb_minus_tt_seconds(tt: &Time<TT>) -> f64 {
     let (jd1, jd2) = tt.split_jd();
     let millennia = ((jd1 - J2000_JD) + jd2) / DAYS_PER_JULIAN_MILLENNIUM;
     let mut coefficients = [0.0; 6];
 
-    for term in terms() {
+    for term in TERMS {
         coefficients[term.power] +=
             term.amplitude * (term.frequency * millennia + term.phase).sin();
     }
@@ -112,7 +108,7 @@ mod tests {
     #[test]
     fn coefficients_have_expected_polynomial_groups() {
         let mut counts = [0; 6];
-        for term in terms() {
+        for term in TERMS {
             counts[term.power] += 1;
         }
 
