@@ -4,6 +4,7 @@ Ergonomic astronomical rust timescales
 `anytime` provides astronomical time scales and conversions with nanosecond
 resolution. [`Time`](https://docs.rs/anytime/latest/anytime/struct.Time.html)
 stores an instant with a type-level scale, making changes of scale explicit.
+Supported scales are UTC, TAI, GPST, TT, TCG, TDB, and UT1.
 
 ## Examples
 

@@ -3,7 +3,7 @@
 
 //! Marker types for the time scales supported by [`crate::Time`].
 //!
-//! The long-form marker names are [`GPST`], [`TAI`], [`TCG`], [`TT`],
+//! The long-form marker names are [`GPST`], [`TAI`], [`TCG`], [`TDB`], [`TT`],
 //! [`UT1`], and [`UTC`]. [`GPS`], [`TDT`], and [`UT`] are aliases for the
 //! corresponding standard names.
 
@@ -11,6 +11,7 @@ pub(crate) mod common;
 mod gpst;
 mod tai;
 mod tcg;
+mod tdb;
 mod tt;
 mod ut1;
 mod utc;
@@ -18,6 +19,7 @@ mod utc;
 pub use gpst::GPST;
 pub use tai::TAI;
 pub use tcg::TCG;
+pub use tdb::TDB;
 pub use tt::TT;
 pub use ut1::UT1;
 pub use utc::UTC;

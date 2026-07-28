@@ -7,6 +7,7 @@ macro_rules! impl_from_anytime {
                     AnyTime::GPST(t) => t.into(),
                     AnyTime::TAI(t) => t.into(),
                     AnyTime::TCG(t) => t.into(),
+                    AnyTime::TDB(t) => t.into(),
                     AnyTime::TT(t) => t.into(),
                     AnyTime::UT1(t) => t.into(),
                     AnyTime::UTC(t) => t.into(),
