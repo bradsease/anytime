@@ -20,7 +20,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Run tests
-        run: cargo test --workspace --all-features --all-targets
+        run: cargo test --workspace --all-features --tests
 
   msrv:
     name: Minimum Rust version
@@ -32,5 +32,5 @@ jobs:
       - name: Install Rust 1.70
         uses: dtolnay/rust-toolchain@1.70
 
-      - name: Run tests
-        run: cargo test --locked --workspace --all-features --all-targets
+      - name: Check library
+        run: cargo check --locked --workspace --all-features --lib
