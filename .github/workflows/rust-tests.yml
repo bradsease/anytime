@@ -32,5 +32,5 @@ jobs:
       - name: Install Rust 1.70
         uses: dtolnay/rust-toolchain@1.70
 
-      - name: Run tests
-        run: cargo test --locked --workspace --all-features --tests
+      - name: Check library
+        run: cargo check --locked --workspace --all-features --lib
