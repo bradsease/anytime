@@ -171,40 +171,38 @@ fn sample_ut1_minus_utc_from_records(
         return Err(EopError::InvalidMjd);
     }
 
-    let mut previous: Option<&Finals2000ARecord> = None;
-
-    for record in records
+    let split_index = records.partition_point(|record| record.mjd <= mjd);
+    let previous = records[..split_index]
         .iter()
-        .filter(|record| record.ut1_minus_utc.is_some())
-    {
-        if record.mjd == mjd {
-            return Ok(record
-                .ut1_minus_utc
-                .expect("filtered EOP record has UT1-UTC"));
-        }
+        .rev()
+        .find(|record| record.ut1_minus_utc.is_some());
+    let next = records[split_index..]
+        .iter()
+        .find(|record| record.ut1_minus_utc.is_some());
 
-        if record.mjd > mjd {
-            let previous = previous.ok_or(EopError::OutOfRange)?;
-            let previous_value = previous
-                .ut1_minus_utc
-                .expect("filtered previous EOP record has UT1-UTC");
-            let next_value = record
-                .ut1_minus_utc
-                .expect("filtered next EOP record has UT1-UTC");
-            let fraction = (mjd - previous.mjd) / (record.mjd - previous.mjd);
-            let mut delta = next_value - previous_value;
-            delta -= delta.round();
-            return Ok(previous_value + fraction * delta);
-        }
+    let Some(previous) = previous else {
+        return if next.is_some() {
+            Err(EopError::OutOfRange)
+        } else {
+            Err(EopError::Empty)
+        };
+    };
 
-        previous = Some(record);
+    let previous_value = previous
+        .ut1_minus_utc
+        .expect("filtered previous EOP record has UT1-UTC");
+    if previous.mjd == mjd {
+        return Ok(previous_value);
     }
 
-    if previous.is_some() {
-        Err(EopError::OutOfRange)
-    } else {
-        Err(EopError::Empty)
-    }
+    let next = next.ok_or(EopError::OutOfRange)?;
+    let next_value = next
+        .ut1_minus_utc
+        .expect("filtered next EOP record has UT1-UTC");
+    let fraction = (mjd - previous.mjd) / (next.mjd - previous.mjd);
+    let mut delta = next_value - previous_value;
+    delta -= delta.round();
+    Ok(previous_value + fraction * delta)
 }
 
 fn parse_finals2000a<R>(reader: R) -> Result<Vec<Finals2000ARecord>, FinalsLoadError>
@@ -433,33 +431,27 @@ mod tests {
         }
     }
 
+    fn test_record(mjd: f64, ut1_minus_utc: Option<f64>) -> Finals2000ARecord {
+        Finals2000ARecord {
+            mjd,
+            x_pole: None,
+            x_pole_error: None,
+            y_pole: None,
+            y_pole_error: None,
+            ut1_status: ut1_minus_utc.map(|_| DataStatus::Observed),
+            ut1_minus_utc,
+            ut1_minus_utc_error: None,
+            lod: None,
+            lod_error: None,
+        }
+    }
+
     #[test]
     fn interpolates_between_records() {
         let records = [
-            Finals2000ARecord {
-                mjd: 100.0,
-                x_pole: None,
-                x_pole_error: None,
-                y_pole: None,
-                y_pole_error: None,
-                ut1_status: Some(DataStatus::Observed),
-                ut1_minus_utc: Some(1.0),
-                ut1_minus_utc_error: None,
-                lod: None,
-                lod_error: None,
-            },
-            Finals2000ARecord {
-                mjd: 101.0,
-                x_pole: None,
-                x_pole_error: None,
-                y_pole: None,
-                y_pole_error: None,
-                ut1_status: Some(DataStatus::Predicted),
-                ut1_minus_utc: Some(1.2),
-                ut1_minus_utc_error: None,
-                lod: None,
-                lod_error: None,
-            },
+            test_record(100.0, Some(1.0)),
+            test_record(100.5, None),
+            test_record(101.0, Some(1.2)),
         ];
 
         assert_eq!(sample_ut1_minus_utc_from_records(&records, 100.0), Ok(1.0));
