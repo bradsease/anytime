@@ -48,3 +48,20 @@ let date_string = Time::<UTC>::from_gregorian(date)
     .to_string();
 assert_eq!(date_string, "2000-01-01 12:00:00.123456789");
 ```
+
+## Benchmarks
+
+Run the scale conversion benchmarks with Criterion:
+
+```bash
+cargo bench --bench scale_conversions
+```
+
+To compare each conversion with the fastest result, run:
+
+```bash
+python3 scripts/benchmark_relative_cost.py
+```
+
+The helper reads Criterion's median estimates and reports relative cost, where
+the fastest conversion is `1.000x`.
