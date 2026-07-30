@@ -34,6 +34,13 @@ struct Finals2000ARecord {
     lod_error: Option<f64>,
 }
 
+/// Finals2000A records indexed directly by their consecutive integer MJD.
+#[derive(Default)]
+struct Finals2000AData {
+    first_mjd: i64,
+    records: Vec<Finals2000ARecord>,
+}
+
 /// Indicates whether an Earth-orientation value is observed or predicted.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DataStatus {
@@ -43,7 +50,10 @@ enum DataStatus {
     Predicted,
 }
 
-static FINALS2000A_DATA: RwLock<Vec<Finals2000ARecord>> = RwLock::new(Vec::new());
+static FINALS2000A_DATA: RwLock<Finals2000AData> = RwLock::new(Finals2000AData {
+    first_mjd: 0,
+    records: Vec::new(),
+});
 
 /// Errors encountered while loading finals2000A.all.
 #[derive(Debug)]
@@ -119,7 +129,8 @@ impl Error for EopError {}
 ///
 /// The file is parsed completely before the existing dataset is replaced, so
 /// a parsing or I/O error leaves previously loaded data available. The return
-/// value is the number of records loaded.
+/// value is the number of records loaded. Records must have consecutive,
+/// integer MJD values, as required by the finals2000A daily data product.
 ///
 /// # Examples
 ///
@@ -144,13 +155,13 @@ fn load_finals2000a_reader<R>(reader: R) -> Result<usize, FinalsLoadError>
 where
     R: BufRead,
 {
-    let records = parse_finals2000a(reader)?;
-    let count = records.len();
+    let parsed_data = parse_finals2000a(reader)?;
+    let count = parsed_data.records.len();
 
     let mut data = FINALS2000A_DATA
         .write()
         .map_err(|_| FinalsLoadError::LockPoisoned)?;
-    *data = records;
+    *data = parsed_data;
 
     Ok(count)
 }
@@ -160,27 +171,34 @@ pub(crate) fn sample_ut1_minus_utc(mjd: f64) -> Result<f64, EopError> {
     let data = FINALS2000A_DATA
         .read()
         .map_err(|_| EopError::LockPoisoned)?;
-    sample_ut1_minus_utc_from_records(&data, mjd)
+    sample_ut1_minus_utc_from_data(&data, mjd)
 }
 
-fn sample_ut1_minus_utc_from_records(
-    records: &[Finals2000ARecord],
-    mjd: f64,
-) -> Result<f64, EopError> {
+fn sample_ut1_minus_utc_from_data(data: &Finals2000AData, mjd: f64) -> Result<f64, EopError> {
     if !mjd.is_finite() {
         return Err(EopError::InvalidMjd);
     }
 
-    let split_index = records.partition_point(|record| record.mjd <= mjd);
-    let previous = records[..split_index]
+    if data.records.is_empty() {
+        return Err(EopError::Empty);
+    }
+
+    let first_mjd = data.first_mjd as f64;
+    let end_mjd = first_mjd + data.records.len() as f64;
+    if mjd < first_mjd || mjd >= end_mjd {
+        return Err(EopError::OutOfRange);
+    }
+
+    let index = (mjd.floor() as i64 - data.first_mjd) as usize;
+    let previous = data.records[..=index]
         .iter()
         .rev()
         .find(|record| record.ut1_minus_utc.is_some());
-    let next = records[split_index..]
-        .iter()
-        .find(|record| record.ut1_minus_utc.is_some());
 
     let Some(previous) = previous else {
+        let next = data.records[index + 1..]
+            .iter()
+            .find(|record| record.ut1_minus_utc.is_some());
         return if next.is_some() {
             Err(EopError::OutOfRange)
         } else {
@@ -195,7 +213,10 @@ fn sample_ut1_minus_utc_from_records(
         return Ok(previous_value);
     }
 
-    let next = next.ok_or(EopError::OutOfRange)?;
+    let next = data.records[index + 1..]
+        .iter()
+        .find(|record| record.ut1_minus_utc.is_some())
+        .ok_or(EopError::OutOfRange)?;
     let next_value = next
         .ut1_minus_utc
         .expect("filtered next EOP record has UT1-UTC");
@@ -205,12 +226,13 @@ fn sample_ut1_minus_utc_from_records(
     Ok(previous_value + fraction * delta)
 }
 
-fn parse_finals2000a<R>(reader: R) -> Result<Vec<Finals2000ARecord>, FinalsLoadError>
+fn parse_finals2000a<R>(reader: R) -> Result<Finals2000AData, FinalsLoadError>
 where
     R: BufRead,
 {
     let mut records = Vec::new();
-    let mut previous_mjd = None;
+    let mut first_mjd = 0;
+    let mut previous_mjd: Option<i64> = None;
 
     for (line_index, line) in reader.lines().enumerate() {
         let line_number = line_index + 1;
@@ -220,19 +242,28 @@ where
         }
 
         let record = parse_record(&line, line_number)?;
+        let mjd = record.mjd as i64;
+        if record.mjd != mjd as f64 {
+            return Err(FinalsLoadError::Parse {
+                line: line_number,
+                message: "MJD values must be integers".to_owned(),
+            });
+        }
         if let Some(previous_mjd) = previous_mjd {
-            if record.mjd <= previous_mjd {
+            if previous_mjd.checked_add(1) != Some(mjd) {
                 return Err(FinalsLoadError::Parse {
                     line: line_number,
-                    message: "MJD values must be strictly increasing".to_owned(),
+                    message: "MJD values must be consecutive days".to_owned(),
                 });
             }
+        } else {
+            first_mjd = mjd;
         }
-        previous_mjd = Some(record.mjd);
+        previous_mjd = Some(mjd);
         records.push(record);
     }
 
-    Ok(records)
+    Ok(Finals2000AData { first_mjd, records })
 }
 
 fn parse_record(line: &str, line_number: usize) -> Result<Finals2000ARecord, FinalsLoadError> {
@@ -371,16 +402,17 @@ mod tests {
     #[test]
     fn parses_the_preloaded_example_file() {
         let contents = include_str!("../data/finals2000A.all");
-        let records = parse_finals2000a(Cursor::new(contents)).unwrap();
+        let data = parse_finals2000a(Cursor::new(contents)).unwrap();
 
-        assert_eq!(records.len(), 19_977);
-        assert_eq!(records[0].mjd, 41_684.0);
-        assert_eq!(records[0].ut1_minus_utc, Some(0.8084178));
-        assert_eq!(records[0].ut1_status, Some(DataStatus::Observed));
-        assert_eq!(records[1].mjd, 41_685.0);
-        assert_eq!(records[1].ut1_minus_utc, Some(0.8056163));
-        assert_eq!(records[19_976].mjd, 61_660.0);
-        assert_eq!(records[19_976].ut1_minus_utc, None);
+        assert_eq!(data.first_mjd, 41_684);
+        assert_eq!(data.records.len(), 19_977);
+        assert_eq!(data.records[0].mjd, 41_684.0);
+        assert_eq!(data.records[0].ut1_minus_utc, Some(0.8084178));
+        assert_eq!(data.records[0].ut1_status, Some(DataStatus::Observed));
+        assert_eq!(data.records[1].mjd, 41_685.0);
+        assert_eq!(data.records[1].ut1_minus_utc, Some(0.8056163));
+        assert_eq!(data.records[19_976].mjd, 61_660.0);
+        assert_eq!(data.records[19_976].ut1_minus_utc, None);
     }
 
     #[test]
@@ -390,9 +422,9 @@ mod tests {
         assert_eq!(count, 19_977);
 
         let data = FINALS2000A_DATA.read().unwrap();
-        assert_eq!(data.len(), count);
-        assert_eq!(data[0].x_pole, Some(0.120733));
-        assert_eq!(data[0].y_pole, Some(0.136966));
+        assert_eq!(data.records.len(), count);
+        assert_eq!(data.records[0].x_pole, Some(0.120733));
+        assert_eq!(data.records[0].y_pole, Some(0.136966));
     }
 
     #[test]
@@ -448,23 +480,38 @@ mod tests {
 
     #[test]
     fn interpolates_between_records() {
-        let records = [
-            test_record(100.0, Some(1.0)),
-            test_record(100.5, None),
-            test_record(101.0, Some(1.2)),
-        ];
+        let data = Finals2000AData {
+            first_mjd: 100,
+            records: vec![
+                test_record(100.0, Some(1.0)),
+                test_record(101.0, None),
+                test_record(102.0, Some(1.2)),
+            ],
+        };
 
-        assert_eq!(sample_ut1_minus_utc_from_records(&records, 100.0), Ok(1.0));
-        assert_eq!(sample_ut1_minus_utc_from_records(&records, 100.5), Ok(1.1));
-        assert_eq!(sample_ut1_minus_utc_from_records(&records, 101.0), Ok(1.2));
+        assert_eq!(sample_ut1_minus_utc_from_data(&data, 100.0), Ok(1.0));
+        assert_eq!(sample_ut1_minus_utc_from_data(&data, 101.0), Ok(1.1));
+        assert_eq!(sample_ut1_minus_utc_from_data(&data, 101.5), Ok(1.15));
         assert_eq!(
-            sample_ut1_minus_utc_from_records(&records, 99.0),
+            sample_ut1_minus_utc_from_data(&data, 99.0),
             Err(EopError::OutOfRange)
         );
         assert_eq!(
-            sample_ut1_minus_utc_from_records(&records, 102.0),
+            sample_ut1_minus_utc_from_data(&data, 103.0),
             Err(EopError::OutOfRange)
         );
+    }
+
+    #[test]
+    fn rejects_non_daily_records() {
+        let non_integer = parse_finals2000a(Cursor::new("73 1 2 41684.50"));
+        assert!(matches!(
+            non_integer,
+            Err(FinalsLoadError::Parse { line: 1, .. })
+        ));
+
+        let gap = parse_finals2000a(Cursor::new("73 1 2 41684.00\n73 1 2 41686.00"));
+        assert!(matches!(gap, Err(FinalsLoadError::Parse { line: 2, .. })));
     }
 
     #[test]
@@ -484,7 +531,7 @@ mod tests {
     fn rejects_non_finite_sample_points() {
         let _lock = global_test_lock().lock().unwrap();
         assert_eq!(
-            sample_ut1_minus_utc_from_records(&[], f64::NAN),
+            sample_ut1_minus_utc_from_data(&Finals2000AData::default(), f64::NAN),
             Err(EopError::InvalidMjd)
         );
         assert_eq!(sample_ut1_minus_utc(f64::NAN), Err(EopError::InvalidMjd));
