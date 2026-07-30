@@ -44,10 +44,8 @@ impl From<Time<TDB>> for Time<TT> {
     fn from(tdb: Time<TDB>) -> Self {
         let mut tt = tdb.shift_scale_secs::<TT>(0.0);
 
-        for _ in 0..2 {
-            let guessed_tdb: Time<TDB> = tt.clone().into();
-            tt.value += tdb.value - guessed_tdb.value;
-        }
+        let guessed_tdb: Time<TDB> = tt.clone().into();
+        tt.value += tdb.value - guessed_tdb.value;
 
         tt
     }
