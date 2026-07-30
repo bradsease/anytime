@@ -7,7 +7,8 @@ use criterion::measurement::WallTime;
 use criterion::{criterion_group, criterion_main, BenchmarkGroup, Criterion, Throughput};
 use std::hint::black_box;
 
-const REFERENCE_JD: f64 = 2_457_754.5;
+// MJD 57_754.25 exercises interpolation between populated daily EOP records.
+const REFERENCE_JD: f64 = 2_457_754.75;
 const EOP_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/data/finals2000A.all");
 
 fn benchmark_conversion<S, T>(
