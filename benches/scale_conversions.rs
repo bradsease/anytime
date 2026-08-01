@@ -1,6 +1,6 @@
 use anytime::{
     load_finals2000a,
-    scales::{GPST, TAI, TCG, TDB, TT, UT1, UTC},
+    scales::{GPST, TAI, TCB, TCG, TDB, TT, UT1, UTC},
     Time,
 };
 use criterion::measurement::WallTime;
@@ -49,6 +49,7 @@ fn scale_conversions(c: &mut Criterion) {
     group.throughput(Throughput::Elements(1));
 
     benchmark_pair!(&mut group, GPST, TAI);
+    benchmark_pair!(&mut group, GPST, TCB);
     benchmark_pair!(&mut group, GPST, TCG);
     benchmark_pair!(&mut group, GPST, TDB);
     benchmark_pair!(&mut group, GPST, TT);
@@ -56,14 +57,24 @@ fn scale_conversions(c: &mut Criterion) {
     benchmark_pair!(&mut group, GPST, UTC);
 
     benchmark_pair!(&mut group, TAI, GPST);
+    benchmark_pair!(&mut group, TAI, TCB);
     benchmark_pair!(&mut group, TAI, TCG);
     benchmark_pair!(&mut group, TAI, TDB);
     benchmark_pair!(&mut group, TAI, TT);
     benchmark_pair!(&mut group, TAI, UT1);
     benchmark_pair!(&mut group, TAI, UTC);
 
+    benchmark_pair!(&mut group, TCB, GPST);
+    benchmark_pair!(&mut group, TCB, TAI);
+    benchmark_pair!(&mut group, TCB, TCG);
+    benchmark_pair!(&mut group, TCB, TDB);
+    benchmark_pair!(&mut group, TCB, TT);
+    benchmark_pair!(&mut group, TCB, UT1);
+    benchmark_pair!(&mut group, TCB, UTC);
+
     benchmark_pair!(&mut group, TCG, GPST);
     benchmark_pair!(&mut group, TCG, TAI);
+    benchmark_pair!(&mut group, TCG, TCB);
     benchmark_pair!(&mut group, TCG, TDB);
     benchmark_pair!(&mut group, TCG, TT);
     benchmark_pair!(&mut group, TCG, UT1);
@@ -71,6 +82,7 @@ fn scale_conversions(c: &mut Criterion) {
 
     benchmark_pair!(&mut group, TDB, GPST);
     benchmark_pair!(&mut group, TDB, TAI);
+    benchmark_pair!(&mut group, TDB, TCB);
     benchmark_pair!(&mut group, TDB, TCG);
     benchmark_pair!(&mut group, TDB, TT);
     benchmark_pair!(&mut group, TDB, UT1);
@@ -78,6 +90,7 @@ fn scale_conversions(c: &mut Criterion) {
 
     benchmark_pair!(&mut group, TT, GPST);
     benchmark_pair!(&mut group, TT, TAI);
+    benchmark_pair!(&mut group, TT, TCB);
     benchmark_pair!(&mut group, TT, TCG);
     benchmark_pair!(&mut group, TT, TDB);
     benchmark_pair!(&mut group, TT, UT1);
@@ -85,6 +98,7 @@ fn scale_conversions(c: &mut Criterion) {
 
     benchmark_pair!(&mut group, UT1, GPST);
     benchmark_pair!(&mut group, UT1, TAI);
+    benchmark_pair!(&mut group, UT1, TCB);
     benchmark_pair!(&mut group, UT1, TCG);
     benchmark_pair!(&mut group, UT1, TDB);
     benchmark_pair!(&mut group, UT1, TT);
@@ -92,6 +106,7 @@ fn scale_conversions(c: &mut Criterion) {
 
     benchmark_pair!(&mut group, UTC, GPST);
     benchmark_pair!(&mut group, UTC, TAI);
+    benchmark_pair!(&mut group, UTC, TCB);
     benchmark_pair!(&mut group, UTC, TCG);
     benchmark_pair!(&mut group, UTC, TDB);
     benchmark_pair!(&mut group, UTC, TT);

@@ -1,5 +1,7 @@
+use super::tcb::{L_B, TDB_0_SECONDS, T_0};
+use crate::constants::DAY_SECONDS;
 use crate::macros::{impl_from_anytime, impl_time_series_from};
-use crate::scales::{GPST, TAI, TCG, TT, UT1, UTC};
+use crate::scales::{GPST, TAI, TCB, TCG, TT, UT1, UTC};
 use crate::{Scale, Time};
 
 const J2000_JD: f64 = 2_451_545.0;
@@ -63,6 +65,16 @@ impl From<Time<TAI>> for Time<TDB> {
     }
 }
 impl_time_series_from!(TAI => TDB);
+
+impl From<Time<TCB>> for Time<TDB> {
+    fn from(tcb: Time<TCB>) -> Self {
+        let (jd1, jd2) = tcb.split_jd();
+        let seconds_since_t_0 = ((jd1 - T_0) + jd2) * DAY_SECONDS;
+        let delta_seconds = -L_B * seconds_since_t_0 + TDB_0_SECONDS;
+        tcb.shift_scale_secs(delta_seconds)
+    }
+}
+impl_time_series_from!(TCB => TDB);
 
 impl From<Time<TCG>> for Time<TDB> {
     fn from(tcg: Time<TCG>) -> Self {
@@ -168,6 +180,7 @@ mod tests {
 
         assert_round_trip::<GPST, TDB>(Time::<GPST>::from_jd(2_457_754.5));
         assert_round_trip::<TAI, TDB>(Time::<TAI>::from_jd(2_457_754.5));
+        assert_round_trip::<TCB, TDB>(Time::<TCB>::from_jd(2_457_754.5));
         assert_round_trip::<TCG, TDB>(Time::<TCG>::from_jd(2_457_754.5));
         assert_round_trip::<TT, TDB>(Time::<TT>::from_jd(2_457_754.5));
         assert_round_trip::<UT1, TDB>(Time::<UT1>::from_jd(2_457_754.5));

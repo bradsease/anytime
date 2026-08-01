@@ -1,5 +1,5 @@
 use crate::macros::{impl_from_anytime, impl_time_series_from};
-use crate::scales::{GPST, TAI, TCG, TDB, TT, UT1};
+use crate::scales::{GPST, TAI, TCB, TCG, TDB, TT, UT1};
 use crate::{Scale, Time};
 
 /// Coordinated Universal Time, the civil time scale with leap seconds.
@@ -37,6 +37,14 @@ impl From<Time<TAI>> for Time<UTC> {
     }
 }
 impl_time_series_from!(TAI => UTC);
+
+impl From<Time<TCB>> for Time<UTC> {
+    fn from(tcb: Time<TCB>) -> Self {
+        let tdb: Time<TDB> = tcb.into();
+        tdb.into()
+    }
+}
+impl_time_series_from!(TCB => UTC);
 
 impl From<Time<TCG>> for Time<UTC> {
     fn from(tcg: Time<TCG>) -> Self {
@@ -98,6 +106,7 @@ mod tests {
 
         assert_round_trip::<GPST, UTC>(Time::<GPST>::from_jd(2_457_754.5));
         assert_round_trip::<TAI, UTC>(Time::<TAI>::from_jd(2_457_754.5));
+        assert_round_trip::<TCB, UTC>(Time::<TCB>::from_jd(2_457_754.5));
         assert_round_trip::<TCG, UTC>(Time::<TCG>::from_jd(2_457_754.5));
         assert_round_trip::<TDB, UTC>(Time::<TDB>::from_jd(2_457_754.5));
         assert_round_trip::<TT, UTC>(Time::<TT>::from_jd(2_457_754.5));

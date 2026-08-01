@@ -1,6 +1,6 @@
 use crate::constants::{DAY_SECONDS, TAI_TT};
 use crate::macros::{impl_from_anytime, impl_time_series_from};
-use crate::scales::{GPST, TAI, TCG, TDB, UT1, UTC};
+use crate::scales::{GPST, TAI, TCB, TCG, TDB, UT1, UTC};
 use crate::{Scale, Time};
 
 /// Terrestrial Time, the uniform time scale used for geocentric ephemerides.
@@ -30,6 +30,14 @@ impl From<Time<TAI>> for Time<TT> {
     }
 }
 impl_time_series_from!(TAI => TT);
+
+impl From<Time<TCB>> for Time<TT> {
+    fn from(tcb: Time<TCB>) -> Self {
+        let tdb: Time<TDB> = tcb.into();
+        tdb.into()
+    }
+}
+impl_time_series_from!(TCB => TT);
 
 impl From<Time<TCG>> for Time<TT> {
     fn from(tcg: Time<TCG>) -> Self {
@@ -82,6 +90,7 @@ mod tests {
 
         assert_round_trip::<GPST, TT>(Time::<GPST>::from_jd(2_457_754.5));
         assert_round_trip::<TAI, TT>(Time::<TAI>::from_jd(2_457_754.5));
+        assert_round_trip::<TCB, TT>(Time::<TCB>::from_jd(2_457_754.5));
         assert_round_trip::<TCG, TT>(Time::<TCG>::from_jd(2_457_754.5));
         assert_round_trip::<TDB, TT>(Time::<TDB>::from_jd(2_457_754.5));
         assert_round_trip::<UT1, TT>(Time::<UT1>::from_jd(2_457_754.5));

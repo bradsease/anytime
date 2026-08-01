@@ -1,7 +1,7 @@
 use crate::constants::{TAI_GPS, TAI_TT};
 use crate::macros::{impl_from_anytime, impl_time_series_from};
 use crate::scales::common::utc_day;
-use crate::scales::{GPST, TCG, TDB, TT, UT1, UTC};
+use crate::scales::{GPST, TCB, TCG, TDB, TT, UT1, UTC};
 use crate::{Scale, Time};
 
 /// International Atomic Time, the continuous atomic reference time scale.
@@ -22,6 +22,14 @@ impl From<Time<GPST>> for Time<TAI> {
     }
 }
 impl_time_series_from!(GPST => TAI);
+
+impl From<Time<TCB>> for Time<TAI> {
+    fn from(tcb: Time<TCB>) -> Self {
+        let tdb: Time<TDB> = tcb.into();
+        tdb.into()
+    }
+}
+impl_time_series_from!(TCB => TAI);
 
 impl From<Time<TCG>> for Time<TAI> {
     fn from(tcg: Time<TCG>) -> Self {
@@ -75,6 +83,7 @@ mod tests {
         load_finals2000a(EXAMPLE_PATH).unwrap();
 
         assert_round_trip::<GPST, TAI>(Time::<GPST>::from_jd(2_457_754.5));
+        assert_round_trip::<TCB, TAI>(Time::<TCB>::from_jd(2_457_754.5));
         assert_round_trip::<TCG, TAI>(Time::<TCG>::from_jd(2_457_754.5));
         assert_round_trip::<TDB, TAI>(Time::<TDB>::from_jd(2_457_754.5));
         assert_round_trip::<TT, TAI>(Time::<TT>::from_jd(2_457_754.5));

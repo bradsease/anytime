@@ -25,6 +25,8 @@ pub enum AnyTime {
     GPST(Time<scales::GPST>),
     /// A value on the International Atomic Time scale.
     TAI(Time<scales::TAI>),
+    /// A value on the Barycentric Coordinate Time scale.
+    TCB(Time<scales::TCB>),
     /// A value on the Geocentric Coordinate Time scale.
     TCG(Time<scales::TCG>),
     /// A value on the Barycentric Dynamical Time scale.
@@ -66,6 +68,7 @@ impl Ord for AnyTime {
         match self {
             Self::GPST(lhs) => lhs.cmp(&other.clone().gpst()),
             Self::TAI(lhs) => lhs.cmp(&other.clone().tai()),
+            Self::TCB(lhs) => lhs.cmp(&other.clone().tcb()),
             Self::TCG(lhs) => lhs.cmp(&other.clone().tcg()),
             Self::TDB(lhs) => lhs.cmp(&other.clone().tdb()),
             Self::TT(lhs) => lhs.cmp(&other.clone().tt()),
@@ -92,6 +95,7 @@ mod tests {
         let variants = [
             AnyTime::GPST(Time::<scales::GPST>::from_jd(2400000.5)),
             any_time,
+            AnyTime::TCB(Time::<scales::TCB>::from_jd(2400000.5)),
             AnyTime::TCG(Time::<scales::TCG>::from_jd(2400000.5)),
             AnyTime::TDB(Time::<scales::TDB>::from_jd(2400000.5)),
             AnyTime::TT(Time::<scales::TT>::from_jd(2400000.5)),
@@ -135,6 +139,7 @@ mod tests {
         let variants = [
             AnyTime::GPST(Time::<scales::GPST>::new(TimeDelta::seconds(100))),
             AnyTime::TAI(Time::<scales::TAI>::new(TimeDelta::seconds(100))),
+            AnyTime::TCB(Time::<scales::TCB>::new(TimeDelta::seconds(100))),
             AnyTime::TCG(Time::<scales::TCG>::new(TimeDelta::seconds(100))),
             AnyTime::TDB(Time::<scales::TDB>::new(TimeDelta::seconds(100))),
             AnyTime::TT(Time::<scales::TT>::new(TimeDelta::seconds(100))),
