@@ -29,6 +29,7 @@ use std::ops::Sub;
 /// assert_eq!(time.jd(), 2_451_545.0);
 /// ```
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Time<S> {
     /// Duration since Julian date epoch.
     pub(crate) value: TimeDelta,
@@ -424,5 +425,14 @@ mod tests {
         let time = Time::<UTC>::from_gregorian(gregorian);
 
         assert_eq!(time.gregorian(), gregorian);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serde_round_trip() {
+        let time = Time::<UTC>::from_split_jd(2_451_545.0, 0.123_456_789);
+        let json = serde_json::to_string(&time).unwrap();
+
+        assert_eq!(serde_json::from_str::<Time<UTC>>(&json).unwrap(), time);
     }
 }

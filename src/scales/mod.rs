@@ -32,6 +32,7 @@ use std::str::FromStr;
 
 /// A time scale selected at runtime.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TimeScale {
     /// GPS Time.
     GPST,
@@ -160,5 +161,16 @@ mod tests {
             assert_eq!(scale.to_string(), scale.as_str());
             assert_eq!(scale.as_str().parse(), Ok(scale));
         }
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serde_round_trip() {
+        let json = serde_json::to_string(&TimeScale::UTC).unwrap();
+
+        assert_eq!(
+            serde_json::from_str::<TimeScale>(&json).unwrap(),
+            TimeScale::UTC
+        );
     }
 }

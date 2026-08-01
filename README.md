@@ -6,6 +6,9 @@ resolution. [`Time`](https://docs.rs/anytime/latest/anytime/struct.Time.html)
 stores an instant with a type-level scale, making changes of scale explicit.
 Supported scales are UTC, TAI, GPST, TT, TCG, TCB, TDB, and UT1.
 
+Enable the optional `serde` feature to serialize and deserialize `Time`,
+`AnyTime`, `TimeSeries`, and `TimeScale` values.
+
 ## Examples
 
 ### Convert between scales

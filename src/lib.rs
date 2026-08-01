@@ -71,6 +71,8 @@
 //! - Use [`TimeSeries`] for stored collections or [`TimeSeries::range_iter`]
 //!   for lazy ranges.
 //! - Use [`AnyTime`] when a collection may contain values from multiple scales.
+//! - Enable the `serde` feature to serialize and deserialize [`Time`],
+//!   [`AnyTime`], [`TimeSeries`], and [`TimeScale`] values.
 //!
 // Astronomical time-scale names intentionally retain their standard acronyms.
 #![allow(clippy::upper_case_acronyms)]
