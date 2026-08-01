@@ -20,6 +20,7 @@ use std::ops::Sub;
 /// assert_eq!(tai - utc, TimeDelta::zero());
 /// ```
 #[derive(Debug, Clone)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AnyTime {
     /// A value on the GPS time scale.
     GPST(Time<scales::GPST>),
@@ -406,5 +407,14 @@ mod tests {
         for variant in variants {
             assert_eq!(variant.cmp(&variant), Ordering::Equal);
         }
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serde_round_trip() {
+        let time = AnyTime::from_jd(2_451_545.0, TimeScale::UTC);
+        let json = serde_json::to_string(&time).unwrap();
+
+        assert_eq!(serde_json::from_str::<AnyTime>(&json).unwrap(), time);
     }
 }

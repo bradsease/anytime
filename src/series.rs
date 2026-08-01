@@ -21,6 +21,8 @@ use chrono::TimeDelta;
 /// assert_eq!(series.len(), 3);
 /// ```
 #[derive(Debug)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(bound = ""))]
 pub struct TimeSeries<S> {
     times: Vec<Time<S>>,
 }
@@ -261,5 +263,15 @@ mod tests {
         let series = TimeSeries::new(vec![tai(0), tai(1)]);
         assert_eq!(series.iter().count(), 2);
         assert_eq!(series.into_iter().count(), 2);
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serde_round_trip() {
+        let series = TimeSeries::new(vec![tai(0), tai(1)]);
+        let json = serde_json::to_string(&series).unwrap();
+        let deserialized = serde_json::from_str::<TimeSeries<TAI>>(&json).unwrap();
+
+        assert_eq!(deserialized.as_slice(), series.as_slice());
     }
 }
