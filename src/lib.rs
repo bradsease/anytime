@@ -45,6 +45,16 @@
 //! # assert_eq!(date_string, "2000-01-01 12:00:00.123456789");
 //! ```
 //!
+//! When the scale is selected at runtime, use [`AnyTime`]'s constructors with
+//! [`TimeScale`]:
+//!
+//! ```
+//! use anytime::{AnyTime, TimeScale};
+//!
+//! let utc = AnyTime::from_isot_str("2000-01-01T12:00:00", TimeScale::UTC).unwrap();
+//! # assert_eq!(utc, AnyTime::from_jd(2_451_545.0, TimeScale::UTC));
+//! ```
+//!
 //! The crate supports UTC, TAI, GPST, TT, TCG, TCB, TDB, and UT1. UTC conversions
 //! use leap-second data built into the crate. UT1 conversions additionally use
 //! Earth-orientation data loaded with [`load_finals2000a`].
@@ -52,7 +62,8 @@
 //! # Feature overview
 //!
 //! - Use [`Time::from_jd`], [`Time::from_mjd`], [`Time::from_split_jd`], or
-//!   [`Time::from_gregorian`] to construct a value.
+//!   [`Time::from_gregorian`] to construct a typed value, or [`AnyTime`]'s
+//!   runtime-scale constructors when the scale is chosen dynamically.
 //! - Use [`Time::jd`], [`Time::mjd`], [`Time::split_jd`], or
 //!   [`Time::gregorian`] to inspect a value.
 //! - Use the `From`/`Into` implementations or [`Time::utc`], [`Time::tai`], and
@@ -77,6 +88,8 @@ mod time;
 
 pub use anytime::{AnyTime, AnyTimeVec};
 pub use eop::{load_finals2000a, FinalsLoadError};
-pub use scales::{GPS, GPST, TAI, TCB, TCG, TDB, TDT, TT, UT, UT1, UTC};
+pub use scales::{
+    TimeScale, TimeScaleParseError, GPS, GPST, TAI, TCB, TCG, TDB, TDT, TT, UT, UT1, UTC,
+};
 pub use series::{TimeSeries, TimeSeriesRange};
 pub use time::{Scale, Time};

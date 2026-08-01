@@ -1,5 +1,5 @@
-use crate::{scales, Time};
-use chrono::TimeDelta;
+use crate::{scales, Time, TimeScale};
+use chrono::{NaiveDateTime, ParseError, TimeDelta};
 use std::cmp::Ordering;
 use std::ops::Sub;
 
@@ -37,6 +37,164 @@ pub enum AnyTime {
     UT1(Time<scales::UT1>),
     /// A value on the Coordinated Universal Time scale.
     UTC(Time<scales::UTC>),
+}
+
+impl AnyTime {
+    /// Returns the scale associated with this time.
+    pub const fn scale(&self) -> TimeScale {
+        match self {
+            Self::GPST(_) => TimeScale::GPST,
+            Self::TAI(_) => TimeScale::TAI,
+            Self::TCB(_) => TimeScale::TCB,
+            Self::TCG(_) => TimeScale::TCG,
+            Self::TDB(_) => TimeScale::TDB,
+            Self::TT(_) => TimeScale::TT,
+            Self::UT1(_) => TimeScale::UT1,
+            Self::UTC(_) => TimeScale::UTC,
+        }
+    }
+
+    /// Creates a time from a proleptic Gregorian date and time in `scale`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use anytime::{AnyTime, TimeScale};
+    /// use chrono::NaiveDate;
+    ///
+    /// let datetime = NaiveDate::from_ymd_opt(2000, 1, 1)
+    ///     .unwrap()
+    ///     .and_hms_opt(12, 0, 0)
+    ///     .unwrap();
+    /// let time = AnyTime::from_datetime(datetime, TimeScale::UTC);
+    /// assert_eq!(time, AnyTime::from_jd(2_451_545.0, TimeScale::UTC));
+    /// ```
+    pub fn from_datetime(datetime: NaiveDateTime, scale: TimeScale) -> Self {
+        match scale {
+            TimeScale::GPST => Time::<scales::GPST>::from_gregorian(datetime).into(),
+            TimeScale::TAI => Time::<scales::TAI>::from_gregorian(datetime).into(),
+            TimeScale::TCB => Time::<scales::TCB>::from_gregorian(datetime).into(),
+            TimeScale::TCG => Time::<scales::TCG>::from_gregorian(datetime).into(),
+            TimeScale::TDB => Time::<scales::TDB>::from_gregorian(datetime).into(),
+            TimeScale::TT => Time::<scales::TT>::from_gregorian(datetime).into(),
+            TimeScale::UT1 => Time::<scales::UT1>::from_gregorian(datetime).into(),
+            TimeScale::UTC => Time::<scales::UTC>::from_gregorian(datetime).into(),
+        }
+    }
+
+    /// Creates a time from a Julian Date in `scale`.
+    pub fn from_jd(jd: f64, scale: TimeScale) -> Self {
+        match scale {
+            TimeScale::GPST => Time::<scales::GPST>::from_jd(jd).into(),
+            TimeScale::TAI => Time::<scales::TAI>::from_jd(jd).into(),
+            TimeScale::TCB => Time::<scales::TCB>::from_jd(jd).into(),
+            TimeScale::TCG => Time::<scales::TCG>::from_jd(jd).into(),
+            TimeScale::TDB => Time::<scales::TDB>::from_jd(jd).into(),
+            TimeScale::TT => Time::<scales::TT>::from_jd(jd).into(),
+            TimeScale::UT1 => Time::<scales::UT1>::from_jd(jd).into(),
+            TimeScale::UTC => Time::<scales::UTC>::from_jd(jd).into(),
+        }
+    }
+
+    /// Creates a time from a Modified Julian Date in `scale`.
+    pub fn from_mjd(mjd: f64, scale: TimeScale) -> Self {
+        match scale {
+            TimeScale::GPST => Time::<scales::GPST>::from_mjd(mjd).into(),
+            TimeScale::TAI => Time::<scales::TAI>::from_mjd(mjd).into(),
+            TimeScale::TCB => Time::<scales::TCB>::from_mjd(mjd).into(),
+            TimeScale::TCG => Time::<scales::TCG>::from_mjd(mjd).into(),
+            TimeScale::TDB => Time::<scales::TDB>::from_mjd(mjd).into(),
+            TimeScale::TT => Time::<scales::TT>::from_mjd(mjd).into(),
+            TimeScale::UT1 => Time::<scales::UT1>::from_mjd(mjd).into(),
+            TimeScale::UTC => Time::<scales::UTC>::from_mjd(mjd).into(),
+        }
+    }
+
+    /// Creates a time from a two-part Julian Date in `scale`.
+    pub fn from_split_jd(jd1: f64, jd2: f64, scale: TimeScale) -> Self {
+        match scale {
+            TimeScale::GPST => Time::<scales::GPST>::from_split_jd(jd1, jd2).into(),
+            TimeScale::TAI => Time::<scales::TAI>::from_split_jd(jd1, jd2).into(),
+            TimeScale::TCB => Time::<scales::TCB>::from_split_jd(jd1, jd2).into(),
+            TimeScale::TCG => Time::<scales::TCG>::from_split_jd(jd1, jd2).into(),
+            TimeScale::TDB => Time::<scales::TDB>::from_split_jd(jd1, jd2).into(),
+            TimeScale::TT => Time::<scales::TT>::from_split_jd(jd1, jd2).into(),
+            TimeScale::UT1 => Time::<scales::UT1>::from_split_jd(jd1, jd2).into(),
+            TimeScale::UTC => Time::<scales::UTC>::from_split_jd(jd1, jd2).into(),
+        }
+    }
+
+    /// Parses an ISO 8601 `T`-separated date and time without an offset in `scale`.
+    ///
+    /// The input must use the `YYYY-MM-DDTHH:MM:SS` form and may include a
+    /// fractional-second component with up to nanosecond precision.
+    pub fn from_isot_str(isot: &str, scale: TimeScale) -> Result<Self, ParseError> {
+        Self::from_str(isot, "%Y-%m-%dT%H:%M:%S%.f", scale)
+    }
+
+    /// Parses an ISO space-separated date and time without an offset in `scale`.
+    ///
+    /// The input must use the `YYYY-MM-DD HH:MM:SS` form and may include a
+    /// fractional-second component with up to nanosecond precision.
+    pub fn from_iso_str(iso: &str, scale: TimeScale) -> Result<Self, ParseError> {
+        Self::from_str(iso, "%Y-%m-%d %H:%M:%S%.f", scale)
+    }
+
+    /// Parses a Chrono-formatted naive date and time string in `scale`.
+    ///
+    /// `format` accepts the full set of Chrono strftime specifiers.
+    pub fn from_str(input: &str, format: &str, scale: TimeScale) -> Result<Self, ParseError> {
+        NaiveDateTime::parse_from_str(input, format)
+            .map(|datetime| Self::from_datetime(datetime, scale))
+    }
+}
+
+impl From<Time<scales::GPST>> for AnyTime {
+    fn from(time: Time<scales::GPST>) -> Self {
+        Self::GPST(time)
+    }
+}
+
+impl From<Time<scales::TAI>> for AnyTime {
+    fn from(time: Time<scales::TAI>) -> Self {
+        Self::TAI(time)
+    }
+}
+
+impl From<Time<scales::TCB>> for AnyTime {
+    fn from(time: Time<scales::TCB>) -> Self {
+        Self::TCB(time)
+    }
+}
+
+impl From<Time<scales::TCG>> for AnyTime {
+    fn from(time: Time<scales::TCG>) -> Self {
+        Self::TCG(time)
+    }
+}
+
+impl From<Time<scales::TDB>> for AnyTime {
+    fn from(time: Time<scales::TDB>) -> Self {
+        Self::TDB(time)
+    }
+}
+
+impl From<Time<scales::TT>> for AnyTime {
+    fn from(time: Time<scales::TT>) -> Self {
+        Self::TT(time)
+    }
+}
+
+impl From<Time<scales::UT1>> for AnyTime {
+    fn from(time: Time<scales::UT1>) -> Self {
+        Self::UT1(time)
+    }
+}
+
+impl From<Time<scales::UTC>> for AnyTime {
+    fn from(time: Time<scales::UTC>) -> Self {
+        Self::UTC(time)
+    }
 }
 
 impl Sub for AnyTime {
@@ -84,6 +242,7 @@ pub type AnyTimeVec = Vec<AnyTime>;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::NaiveDate;
     use std::cmp::Ordering;
 
     #[test]
@@ -105,6 +264,103 @@ mod tests {
 
         for variant in variants {
             let _: Time<scales::TAI> = variant.into();
+        }
+    }
+
+    #[test]
+    fn test_constructors() {
+        let datetime = NaiveDate::from_ymd_opt(2000, 1, 1)
+            .unwrap()
+            .and_hms_nano_opt(12, 0, 0, 123_456_789)
+            .unwrap();
+
+        assert_eq!(
+            AnyTime::from_datetime(datetime, TimeScale::UTC),
+            AnyTime::UTC(Time::<scales::UTC>::from_gregorian(datetime))
+        );
+        assert_eq!(
+            AnyTime::from_jd(2_451_545.0, TimeScale::TAI),
+            AnyTime::TAI(Time::<scales::TAI>::from_jd(2_451_545.0))
+        );
+        assert_eq!(
+            AnyTime::from_mjd(51_544.5, TimeScale::TT),
+            AnyTime::TT(Time::<scales::TT>::from_mjd(51_544.5))
+        );
+        assert_eq!(
+            AnyTime::from_split_jd(2_451_545.0, 0.25, TimeScale::GPST),
+            AnyTime::GPST(Time::<scales::GPST>::from_split_jd(2_451_545.0, 0.25))
+        );
+        assert!(matches!(
+            AnyTime::from_jd(2_451_545.0, TimeScale::TCB),
+            AnyTime::TCB(_)
+        ));
+        assert!(matches!(
+            AnyTime::from_jd(2_451_545.0, TimeScale::TCG),
+            AnyTime::TCG(_)
+        ));
+        assert!(matches!(
+            AnyTime::from_jd(2_451_545.0, TimeScale::TDB),
+            AnyTime::TDB(_)
+        ));
+        assert!(matches!(
+            AnyTime::from_jd(2_451_545.0, TimeScale::UT1),
+            AnyTime::UT1(_)
+        ));
+        assert_eq!(
+            AnyTime::from_isot_str("2000-01-01T12:00:00.123456789", TimeScale::UTC).unwrap(),
+            AnyTime::from_datetime(datetime, TimeScale::UTC)
+        );
+        assert_eq!(
+            AnyTime::from_iso_str("2000-01-01 12:00:00.123456789", TimeScale::UTC).unwrap(),
+            AnyTime::from_datetime(datetime, TimeScale::UTC)
+        );
+        assert_eq!(
+            AnyTime::from_str(
+                "2000-01-01 12:00:00.123456789",
+                "%Y-%m-%d %H:%M:%S%.f",
+                TimeScale::UTC,
+            )
+            .unwrap(),
+            AnyTime::from_datetime(datetime, TimeScale::UTC)
+        );
+        assert_eq!(
+            AnyTime::from_str("00/01/01 12:00", "%y/%m/%d %H:%M", TimeScale::UTC).unwrap(),
+            AnyTime::from_datetime(
+                NaiveDate::from_ymd_opt(2000, 1, 1)
+                    .unwrap()
+                    .and_hms_opt(12, 0, 0)
+                    .unwrap(),
+                TimeScale::UTC,
+            )
+        );
+        assert!(AnyTime::from_isot_str("not a datetime", TimeScale::UTC).is_err());
+    }
+
+    #[test]
+    fn test_scale() {
+        let times = [
+            AnyTime::from_jd(2_451_545.0, TimeScale::GPST),
+            AnyTime::from_jd(2_451_545.0, TimeScale::TAI),
+            AnyTime::from_jd(2_451_545.0, TimeScale::TCB),
+            AnyTime::from_jd(2_451_545.0, TimeScale::TCG),
+            AnyTime::from_jd(2_451_545.0, TimeScale::TDB),
+            AnyTime::from_jd(2_451_545.0, TimeScale::TT),
+            AnyTime::from_jd(2_451_545.0, TimeScale::UT1),
+            AnyTime::from_jd(2_451_545.0, TimeScale::UTC),
+        ];
+        let scales = [
+            TimeScale::GPST,
+            TimeScale::TAI,
+            TimeScale::TCB,
+            TimeScale::TCG,
+            TimeScale::TDB,
+            TimeScale::TT,
+            TimeScale::UT1,
+            TimeScale::UTC,
+        ];
+
+        for (time, scale) in times.iter().zip(scales) {
+            assert_eq!(time.scale(), scale);
         }
     }
 

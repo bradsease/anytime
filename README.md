@@ -49,6 +49,15 @@ let date_string = Time::<UTC>::from_gregorian(date)
 assert_eq!(date_string, "2000-01-01 12:00:00.123456789");
 ```
 
+### Construct with a runtime scale
+
+```rust
+use anytime::{AnyTime, TimeScale};
+
+let utc = AnyTime::from_isot_str("2000-01-01T12:00:00", TimeScale::UTC).unwrap();
+assert_eq!(utc, AnyTime::from_jd(2_451_545.0, TimeScale::UTC));
+```
+
 ## Benchmarks
 
 Run the scale conversion benchmarks with Criterion:
