@@ -281,6 +281,7 @@ impl<S> Ord for Time<S> {
 
 impl_to_scale!(scales::GPST, gpst);
 impl_to_scale!(scales::TAI, tai);
+impl_to_scale!(scales::TCB, tcb);
 impl_to_scale!(scales::TCG, tcg);
 impl_to_scale!(scales::TDB, tdb);
 impl_to_scale!(scales::TT, tt);

@@ -1,6 +1,6 @@
 use crate::constants::TAI_GPS;
 use crate::macros::{impl_from_anytime, impl_time_series_from};
-use crate::scales::{TAI, TCG, TDB, TT, UT1, UTC};
+use crate::scales::{TAI, TCB, TCG, TDB, TT, UT1, UTC};
 use crate::{Scale, Time};
 
 /// GPS time, a continuous atomic time scale maintained by the GPS system.
@@ -22,6 +22,14 @@ impl From<Time<TAI>> for Time<GPST> {
     }
 }
 impl_time_series_from!(TAI => GPST);
+
+impl From<Time<TCB>> for Time<GPST> {
+    fn from(tcb: Time<TCB>) -> Self {
+        let tdb: Time<TDB> = tcb.into();
+        tdb.into()
+    }
+}
+impl_time_series_from!(TCB => GPST);
 
 impl From<Time<TCG>> for Time<GPST> {
     fn from(tcg: Time<TCG>) -> Self {
@@ -76,6 +84,7 @@ mod tests {
         load_finals2000a(EXAMPLE_PATH).unwrap();
 
         assert_round_trip::<TAI, GPST>(Time::<TAI>::from_jd(2_457_754.5));
+        assert_round_trip::<TCB, GPST>(Time::<TCB>::from_jd(2_457_754.5));
         assert_round_trip::<TCG, GPST>(Time::<TCG>::from_jd(2_457_754.5));
         assert_round_trip::<TDB, GPST>(Time::<TDB>::from_jd(2_457_754.5));
         assert_round_trip::<TT, GPST>(Time::<TT>::from_jd(2_457_754.5));

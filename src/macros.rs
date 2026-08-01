@@ -6,6 +6,7 @@ macro_rules! impl_from_anytime {
                 match any_time {
                     AnyTime::GPST(t) => t.into(),
                     AnyTime::TAI(t) => t.into(),
+                    AnyTime::TCB(t) => t.into(),
                     AnyTime::TCG(t) => t.into(),
                     AnyTime::TDB(t) => t.into(),
                     AnyTime::TT(t) => t.into(),
