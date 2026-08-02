@@ -293,9 +293,6 @@ impl Ord for AnyTime {
     }
 }
 
-/// A growable collection of time values that may use different scales.
-pub type AnyTimeVec = Vec<AnyTime>;
-
 #[cfg(test)]
 mod tests {
     use super::*;
