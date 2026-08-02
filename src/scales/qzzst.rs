@@ -1,6 +1,6 @@
 use crate::constants::TAI_GPS;
 use crate::macros::{impl_from_anytime, impl_time_series_from};
-use crate::scales::{GPST, TAI, TCB, TCG, TDB, TT, UT1, UTC};
+use crate::scales::{BDT, GPST, GST, TAI, TCB, TCG, TDB, TT, UT1, UTC};
 use crate::{Scale, Time};
 
 /// QZSS Time, synchronized with GPS Time.
@@ -143,7 +143,11 @@ impl_time_series_from!(QZZST => UT1);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::load_finals2000a;
+    use crate::scales::common::assert_round_trip;
     use chrono::TimeDelta;
+
+    const EXAMPLE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/data/finals2000A.all");
 
     #[test]
     fn applies_tai_offset() {
@@ -152,5 +156,21 @@ mod tests {
 
         assert_eq!(tai.value - qzzst.value, TimeDelta::seconds(19));
         assert_eq!(qzzst.tai(), tai);
+    }
+
+    #[test]
+    fn conversions_round_trip() {
+        load_finals2000a(EXAMPLE_PATH).unwrap();
+
+        assert_round_trip::<BDT, QZZST>(Time::<BDT>::from_jd(2_457_754.5));
+        assert_round_trip::<GPST, QZZST>(Time::<GPST>::from_jd(2_457_754.5));
+        assert_round_trip::<GST, QZZST>(Time::<GST>::from_jd(2_457_754.5));
+        assert_round_trip::<TAI, QZZST>(Time::<TAI>::from_jd(2_457_754.5));
+        assert_round_trip::<TCB, QZZST>(Time::<TCB>::from_jd(2_457_754.5));
+        assert_round_trip::<TCG, QZZST>(Time::<TCG>::from_jd(2_457_754.5));
+        assert_round_trip::<TDB, QZZST>(Time::<TDB>::from_jd(2_457_754.5));
+        assert_round_trip::<TT, QZZST>(Time::<TT>::from_jd(2_457_754.5));
+        assert_round_trip::<UT1, QZZST>(Time::<UT1>::from_jd(2_457_754.5));
+        assert_round_trip::<UTC, QZZST>(Time::<UTC>::from_jd(2_457_754.5));
     }
 }

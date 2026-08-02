@@ -1,6 +1,6 @@
 use crate::constants::GLONASST_UTC;
 use crate::macros::{impl_from_anytime, impl_time_series_from};
-use crate::scales::{GPST, QZZST, TAI, TCB, TCG, TDB, TT, UT1, UTC};
+use crate::scales::{BDT, GPST, GST, QZZST, TAI, TCB, TCG, TDB, TT, UT1, UTC};
 use crate::{Scale, Time};
 
 /// GLONASS Time, defined as UTC plus three hours.
@@ -161,7 +161,11 @@ impl_time_series_from!(GLONASST => UT1);
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::load_finals2000a;
+    use crate::scales::common::assert_round_trip;
     use chrono::{NaiveDate, TimeDelta};
+
+    const EXAMPLE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/data/finals2000A.all");
 
     #[test]
     fn applies_utc_offset() {
@@ -175,5 +179,22 @@ mod tests {
 
         assert_eq!(glonasst.value - utc.value, TimeDelta::hours(3));
         assert_eq!(glonasst.tai(), utc.tai());
+    }
+
+    #[test]
+    fn conversions_round_trip() {
+        load_finals2000a(EXAMPLE_PATH).unwrap();
+
+        assert_round_trip::<BDT, GLONASST>(Time::<BDT>::from_jd(2_457_754.5));
+        assert_round_trip::<GPST, GLONASST>(Time::<GPST>::from_jd(2_457_754.5));
+        assert_round_trip::<GST, GLONASST>(Time::<GST>::from_jd(2_457_754.5));
+        assert_round_trip::<QZZST, GLONASST>(Time::<QZZST>::from_jd(2_457_754.5));
+        assert_round_trip::<TAI, GLONASST>(Time::<TAI>::from_jd(2_457_754.5));
+        assert_round_trip::<TCB, GLONASST>(Time::<TCB>::from_jd(2_457_754.5));
+        assert_round_trip::<TCG, GLONASST>(Time::<TCG>::from_jd(2_457_754.5));
+        assert_round_trip::<TDB, GLONASST>(Time::<TDB>::from_jd(2_457_754.5));
+        assert_round_trip::<TT, GLONASST>(Time::<TT>::from_jd(2_457_754.5));
+        assert_round_trip::<UT1, GLONASST>(Time::<UT1>::from_jd(2_457_754.5));
+        assert_round_trip::<UTC, GLONASST>(Time::<UTC>::from_jd(2_457_754.5));
     }
 }

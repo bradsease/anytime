@@ -398,6 +398,31 @@ mod tests {
     }
 
     #[test]
+    fn test_gnss_constructors() {
+        let datetime = NaiveDate::from_ymd_opt(2000, 1, 1)
+            .unwrap()
+            .and_hms_nano_opt(12, 0, 0, 123_456_789)
+            .unwrap();
+        let scales = [
+            TimeScale::BDT,
+            TimeScale::GLONASST,
+            TimeScale::GPST,
+            TimeScale::GST,
+            TimeScale::QZZST,
+        ];
+
+        for scale in scales {
+            assert_eq!(AnyTime::from_datetime(datetime, scale).scale(), scale);
+            assert_eq!(AnyTime::from_jd(2_451_545.0, scale).scale(), scale);
+            assert_eq!(AnyTime::from_mjd(51_544.5, scale).scale(), scale);
+            assert_eq!(
+                AnyTime::from_split_jd(2_451_545.0, 0.25, scale).scale(),
+                scale
+            );
+        }
+    }
+
+    #[test]
     fn test_scale() {
         let times = [
             AnyTime::from_jd(2_451_545.0, TimeScale::BDT),
