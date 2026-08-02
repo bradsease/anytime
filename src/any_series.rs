@@ -83,6 +83,25 @@ enum AnyTimeSeriesIntoIterInner {
     UTC(std::vec::IntoIter<crate::Time<scales::UTC>>),
 }
 
+macro_rules! with_series {
+    ($value:expr, |$series:ident| $body:expr) => {
+        match $value {
+            AnyTimeSeries::BDT($series) => $body,
+            AnyTimeSeries::GLONASST($series) => $body,
+            AnyTimeSeries::GPST($series) => $body,
+            AnyTimeSeries::GST($series) => $body,
+            AnyTimeSeries::QZZST($series) => $body,
+            AnyTimeSeries::TAI($series) => $body,
+            AnyTimeSeries::TCB($series) => $body,
+            AnyTimeSeries::TCG($series) => $body,
+            AnyTimeSeries::TDB($series) => $body,
+            AnyTimeSeries::TT($series) => $body,
+            AnyTimeSeries::UT1($series) => $body,
+            AnyTimeSeries::UTC($series) => $body,
+        }
+    };
+}
+
 impl AnyTimeSeries {
     /// Creates a series by converting all values to `scale`.
     ///
@@ -147,79 +166,27 @@ impl AnyTimeSeries {
 
     /// Returns the number of time values in the series.
     pub fn len(&self) -> usize {
-        match self {
-            Self::BDT(series) => series.len(),
-            Self::GLONASST(series) => series.len(),
-            Self::GPST(series) => series.len(),
-            Self::GST(series) => series.len(),
-            Self::QZZST(series) => series.len(),
-            Self::TAI(series) => series.len(),
-            Self::TCB(series) => series.len(),
-            Self::TCG(series) => series.len(),
-            Self::TDB(series) => series.len(),
-            Self::TT(series) => series.len(),
-            Self::UT1(series) => series.len(),
-            Self::UTC(series) => series.len(),
-        }
+        with_series!(self, |series| series.len())
     }
 
     /// Returns whether the series contains no time values.
     pub fn is_empty(&self) -> bool {
-        match self {
-            Self::BDT(series) => series.is_empty(),
-            Self::GLONASST(series) => series.is_empty(),
-            Self::GPST(series) => series.is_empty(),
-            Self::GST(series) => series.is_empty(),
-            Self::QZZST(series) => series.is_empty(),
-            Self::TAI(series) => series.is_empty(),
-            Self::TCB(series) => series.is_empty(),
-            Self::TCG(series) => series.is_empty(),
-            Self::TDB(series) => series.is_empty(),
-            Self::TT(series) => series.is_empty(),
-            Self::UT1(series) => series.is_empty(),
-            Self::UTC(series) => series.is_empty(),
-        }
+        with_series!(self, |series| series.is_empty())
     }
 
     /// Returns the elapsed physical duration from the earliest to latest time.
     pub fn duration(&self) -> TimeDelta {
-        match self {
-            Self::BDT(series) => series.duration(),
-            Self::GLONASST(series) => series.duration(),
-            Self::GPST(series) => series.duration(),
-            Self::GST(series) => series.duration(),
-            Self::QZZST(series) => series.duration(),
-            Self::TAI(series) => series.duration(),
-            Self::TCB(series) => series.duration(),
-            Self::TCG(series) => series.duration(),
-            Self::TDB(series) => series.duration(),
-            Self::TT(series) => series.duration(),
-            Self::UT1(series) => series.duration(),
-            Self::UTC(series) => series.duration(),
-        }
+        with_series!(self, |series| series.duration())
     }
 
     /// Returns the first time in the series.
     pub fn first(&self) -> Option<AnyTime> {
-        self.iter().next()
+        with_series!(self, |series| series.first().cloned().map(Into::into))
     }
 
     /// Returns the final time in the series.
     pub fn last(&self) -> Option<AnyTime> {
-        match self {
-            Self::BDT(series) => series.last().cloned().map(Into::into),
-            Self::GLONASST(series) => series.last().cloned().map(Into::into),
-            Self::GPST(series) => series.last().cloned().map(Into::into),
-            Self::GST(series) => series.last().cloned().map(Into::into),
-            Self::QZZST(series) => series.last().cloned().map(Into::into),
-            Self::TAI(series) => series.last().cloned().map(Into::into),
-            Self::TCB(series) => series.last().cloned().map(Into::into),
-            Self::TCG(series) => series.last().cloned().map(Into::into),
-            Self::TDB(series) => series.last().cloned().map(Into::into),
-            Self::TT(series) => series.last().cloned().map(Into::into),
-            Self::UT1(series) => series.last().cloned().map(Into::into),
-            Self::UTC(series) => series.last().cloned().map(Into::into),
-        }
+        with_series!(self, |series| series.last().cloned().map(Into::into))
     }
 
     /// Iterates over the time values in their stored order.
