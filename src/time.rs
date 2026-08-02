@@ -511,6 +511,37 @@ mod tests {
     }
 
     #[test]
+    fn test_typed_parsers_support_optional_fractional_seconds_and_custom_formats() {
+        let expected = Time::<TAI>::from_datetime(
+            NaiveDate::from_ymd_opt(2000, 1, 1)
+                .unwrap()
+                .and_hms_opt(12, 0, 0)
+                .unwrap(),
+        );
+
+        assert_eq!(
+            Time::<TAI>::from_isot_str("2000-01-01T12:00:00").unwrap(),
+            expected
+        );
+        assert_eq!(
+            Time::<TAI>::from_iso_str("2000-01-01 12:00:00").unwrap(),
+            expected
+        );
+        assert_eq!(
+            Time::<TAI>::from_str("00/01/01 12:00", "%y/%m/%d %H:%M").unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn test_typed_parsers_reject_invalid_inputs() {
+        assert!(Time::<UTC>::from_iso_str("2000-01-01T12:00:00").is_err());
+        assert!(Time::<UTC>::from_str("2000-01-01", "%Y-%m-%dT%H:%M:%S").is_err());
+        assert!("2000-01-01T12:00:00Z".parse::<Time<UTC>>().is_err());
+        assert!(Time::<UTC>::from_isot_str("2016-12-31T23:59:61").is_err());
+    }
+
+    #[test]
     fn test_utc_gregorian_leap_second() {
         let gregorian = NaiveDate::from_ymd_opt(2016, 12, 31)
             .unwrap()
