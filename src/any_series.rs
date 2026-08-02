@@ -380,6 +380,56 @@ mod tests {
         Time::new(TimeDelta::seconds(seconds))
     }
 
+    fn series_for_each_scale() -> Vec<AnyTimeSeries> {
+        vec![
+            AnyTimeSeries::BDT(TimeSeries::new(vec![
+                Time::<scales::BDT>::new(TimeDelta::zero()),
+                Time::<scales::BDT>::new(TimeDelta::seconds(1)),
+            ])),
+            AnyTimeSeries::GLONASST(TimeSeries::new(vec![
+                Time::<scales::GLONASST>::new(TimeDelta::zero()),
+                Time::<scales::GLONASST>::new(TimeDelta::seconds(1)),
+            ])),
+            AnyTimeSeries::GPST(TimeSeries::new(vec![
+                Time::<scales::GPST>::new(TimeDelta::zero()),
+                Time::<scales::GPST>::new(TimeDelta::seconds(1)),
+            ])),
+            AnyTimeSeries::GST(TimeSeries::new(vec![
+                Time::<scales::GST>::new(TimeDelta::zero()),
+                Time::<scales::GST>::new(TimeDelta::seconds(1)),
+            ])),
+            AnyTimeSeries::QZZST(TimeSeries::new(vec![
+                Time::<scales::QZZST>::new(TimeDelta::zero()),
+                Time::<scales::QZZST>::new(TimeDelta::seconds(1)),
+            ])),
+            AnyTimeSeries::TAI(TimeSeries::new(vec![tai(0), tai(1)])),
+            AnyTimeSeries::TCB(TimeSeries::new(vec![
+                Time::<scales::TCB>::new(TimeDelta::zero()),
+                Time::<scales::TCB>::new(TimeDelta::seconds(1)),
+            ])),
+            AnyTimeSeries::TCG(TimeSeries::new(vec![
+                Time::<scales::TCG>::new(TimeDelta::zero()),
+                Time::<scales::TCG>::new(TimeDelta::seconds(1)),
+            ])),
+            AnyTimeSeries::TDB(TimeSeries::new(vec![
+                Time::<scales::TDB>::new(TimeDelta::zero()),
+                Time::<scales::TDB>::new(TimeDelta::seconds(1)),
+            ])),
+            AnyTimeSeries::TT(TimeSeries::new(vec![
+                Time::<scales::TT>::new(TimeDelta::zero()),
+                Time::<scales::TT>::new(TimeDelta::seconds(1)),
+            ])),
+            AnyTimeSeries::UT1(TimeSeries::new(vec![
+                Time::<scales::UT1>::new(TimeDelta::zero()),
+                Time::<scales::UT1>::new(TimeDelta::seconds(1)),
+            ])),
+            AnyTimeSeries::UTC(TimeSeries::new(vec![
+                Time::<scales::UTC>::new(TimeDelta::zero()),
+                Time::<scales::UTC>::new(TimeDelta::seconds(1)),
+            ])),
+        ]
+    }
+
     #[test]
     fn converts_to_and_from_typed_series() {
         let series: AnyTimeSeries = TimeSeries::new(vec![tai(0), tai(1)]).into();
@@ -447,18 +497,84 @@ mod tests {
     }
 
     #[test]
-    fn normalizes_values_to_the_requested_scale() {
-        let utc: Time<UTC> = tai(0).into();
-        let series = AnyTimeSeries::from_times(
-            vec![AnyTime::TAI(tai(0)), AnyTime::UTC(utc)],
-            TimeScale::TAI,
-        );
+    fn every_variant_supports_common_operations_and_runtime_conversion() {
+        for series in series_for_each_scale() {
+            let scale = series.scale();
 
-        assert_eq!(series.scale(), TimeScale::TAI);
-        assert_eq!(
-            series.iter().collect::<Vec<_>>(),
-            vec![AnyTime::TAI(tai(0)), AnyTime::TAI(tai(0))]
-        );
+            assert_eq!(series.len(), 2);
+            assert!(!series.is_empty());
+            assert_eq!(series.first().unwrap().scale(), scale);
+            assert_eq!(series.last().unwrap().scale(), scale);
+            assert!(series.duration() > TimeDelta::zero());
+
+            let mut iter = series.iter();
+            assert_eq!(iter.next().unwrap().scale(), scale);
+            assert_eq!(iter.count(), 1);
+
+            let tai: TimeSeries<TAI> = series.into();
+            assert_eq!(tai.len(), 2);
+        }
+
+        for series in series_for_each_scale() {
+            assert_eq!(series.into_iter().count(), 2);
+        }
+    }
+
+    #[test]
+    fn normalizes_values_to_every_requested_scale() {
+        let scales = [
+            TimeScale::BDT,
+            TimeScale::GLONASST,
+            TimeScale::GPST,
+            TimeScale::GST,
+            TimeScale::QZZST,
+            TimeScale::TAI,
+            TimeScale::TCB,
+            TimeScale::TCG,
+            TimeScale::TDB,
+            TimeScale::TT,
+            TimeScale::UT1,
+            TimeScale::UTC,
+        ];
+        let utc: Time<UTC> = tai(0).into();
+
+        for scale in scales {
+            let series = AnyTimeSeries::from_times(
+                vec![AnyTime::TAI(tai(0)), AnyTime::UTC(utc.clone())],
+                scale,
+            );
+
+            assert_eq!(series.scale(), scale);
+            assert_eq!(series.len(), 2);
+            assert!(series.iter().all(|time| time.scale() == scale));
+        }
+    }
+
+    #[test]
+    fn typed_series_converts_to_every_runtime_variant() {
+        macro_rules! assert_runtime_variant {
+            ($scale:ident) => {{
+                let series = TimeSeries::<scales::$scale>::new(vec![Time::<scales::$scale>::new(
+                    TimeDelta::zero(),
+                )]);
+                let any: AnyTimeSeries = series.into();
+
+                assert_eq!(any.scale(), TimeScale::$scale);
+            }};
+        }
+
+        assert_runtime_variant!(BDT);
+        assert_runtime_variant!(GLONASST);
+        assert_runtime_variant!(GPST);
+        assert_runtime_variant!(GST);
+        assert_runtime_variant!(QZZST);
+        assert_runtime_variant!(TAI);
+        assert_runtime_variant!(TCB);
+        assert_runtime_variant!(TCG);
+        assert_runtime_variant!(TDB);
+        assert_runtime_variant!(TT);
+        assert_runtime_variant!(UT1);
+        assert_runtime_variant!(UTC);
     }
 
     #[test]
@@ -473,13 +589,16 @@ mod tests {
     #[cfg(feature = "serde")]
     #[test]
     fn serde_round_trip() {
-        let series: AnyTimeSeries = TimeSeries::new(vec![tai(0), tai(1)]).into();
-        let json = serde_json::to_string(&series).unwrap();
-        let deserialized = serde_json::from_str::<AnyTimeSeries>(&json).unwrap();
+        for series in series_for_each_scale() {
+            let scale = series.scale();
+            let json = serde_json::to_string(&series).unwrap();
+            let deserialized = serde_json::from_str::<AnyTimeSeries>(&json).unwrap();
 
-        assert_eq!(
-            deserialized.iter().collect::<Vec<_>>(),
-            series.into_iter().collect::<Vec<_>>()
-        );
+            assert_eq!(deserialized.scale(), scale);
+            assert_eq!(
+                deserialized.iter().collect::<Vec<_>>(),
+                series.into_iter().collect::<Vec<_>>()
+            );
+        }
     }
 }
