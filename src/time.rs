@@ -2,10 +2,11 @@ use crate::anytime::AnyTime;
 use crate::constants::{DAY_SECONDS, JD_TO_MJD, JD_TO_UNIX_SECONDS};
 use crate::macros::impl_to_scale;
 use crate::scales;
-use chrono::{NaiveDate, NaiveDateTime, TimeDelta, Timelike};
+use chrono::{NaiveDate, NaiveDateTime, ParseError, TimeDelta, Timelike};
 use std::cmp::Ordering;
 use std::marker::PhantomData;
 use std::ops::Sub;
+use std::str::FromStr;
 
 /// A time value associated with a specific time scale.
 ///
@@ -13,6 +14,9 @@ use std::ops::Sub;
 /// scales are checked by the compiler. The value has nanosecond precision and
 /// can be represented as a Julian Date, Modified Julian Date, or Gregorian
 /// date and time.
+///
+/// `Time<S>` implements [`FromStr`] for an ISO 8601 `T`-separated date and
+/// time without an offset. The parsed date and time is interpreted in `S`.
 ///
 /// # Examples
 ///
@@ -217,9 +221,53 @@ impl<S: Scale> Time<S> {
         )
     }
 
+    /// Creates a time from a proleptic Gregorian date and time in its scale.
+    ///
+    /// This is an alias for [`Self::from_gregorian`].
+    pub fn from_datetime(datetime: NaiveDateTime) -> Self {
+        Self::from_gregorian(datetime)
+    }
+
+    /// Parses an ISO 8601 `T`-separated date and time without an offset.
+    ///
+    /// The input must use the `YYYY-MM-DDTHH:MM:SS` form and may include a
+    /// fractional-second component with up to nanosecond precision. The date
+    /// and time is interpreted in this `Time` value's scale. Leap seconds use
+    /// Chrono's `HH:MM:60` representation.
+    pub fn from_isot_str(isot: &str) -> Result<Self, ParseError> {
+        Self::from_str(isot, "%Y-%m-%dT%H:%M:%S%.f")
+    }
+
+    /// Parses an ISO space-separated date and time without an offset.
+    ///
+    /// The input must use the `YYYY-MM-DD HH:MM:SS` form and may include a
+    /// fractional-second component with up to nanosecond precision. The date
+    /// and time is interpreted in this `Time` value's scale.
+    pub fn from_iso_str(iso: &str) -> Result<Self, ParseError> {
+        Self::from_str(iso, "%Y-%m-%d %H:%M:%S%.f")
+    }
+
+    /// Parses a Chrono-formatted naive date and time in this scale.
+    ///
+    /// `format` accepts the full set of Chrono strftime specifiers.
+    pub fn from_str(input: &str, format: &str) -> Result<Self, ParseError> {
+        NaiveDateTime::parse_from_str(input, format).map(Self::from_datetime)
+    }
+
     pub(crate) fn shift_scale_secs<T: Scale>(&self, seconds: f64) -> Time<T> {
         let nanoseconds = (seconds * 1e9).round() as i64;
         Time::<T>::new(self.value + TimeDelta::nanoseconds(nanoseconds))
+    }
+}
+
+impl<S: Scale> FromStr for Time<S> {
+    type Err = ParseError;
+
+    /// Parses an offset-free ISO 8601 `T`-separated date and time in `S`.
+    ///
+    /// This is equivalent to [`Time::from_isot_str`].
+    fn from_str(isot: &str) -> Result<Self, Self::Err> {
+        Self::from_isot_str(isot)
     }
 }
 
@@ -296,7 +344,39 @@ impl_to_scale!(scales::UTC, utc);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scales::{TAI, TT, UTC};
+    use crate::scales::{BDT, GLONASST, GPST, GST, QZZST, TAI, TCB, TCG, TDB, TT, UT1, UTC};
+
+    macro_rules! assert_parses_datetime {
+        ($scale:ty) => {{
+            let datetime = NaiveDate::from_ymd_opt(2000, 1, 1)
+                .unwrap()
+                .and_hms_nano_opt(12, 0, 0, 123_456_789)
+                .unwrap();
+            let expected = Time::<$scale>::from_datetime(datetime);
+
+            assert_eq!(expected, Time::<$scale>::from_gregorian(datetime));
+
+            assert_eq!(
+                Time::<$scale>::from_isot_str("2000-01-01T12:00:00.123456789").unwrap(),
+                expected
+            );
+            assert_eq!(
+                Time::<$scale>::from_iso_str("2000-01-01 12:00:00.123456789").unwrap(),
+                expected
+            );
+            assert_eq!(
+                Time::<$scale>::from_str("2000-01-01 12:00:00.123456789", "%Y-%m-%d %H:%M:%S%.f")
+                    .unwrap(),
+                expected
+            );
+            assert_eq!(
+                "2000-01-01T12:00:00.123456789"
+                    .parse::<Time<$scale>>()
+                    .unwrap(),
+                expected
+            );
+        }};
+    }
 
     #[test]
     fn test_subtraction() {
@@ -421,6 +501,55 @@ mod tests {
     }
 
     #[test]
+    fn test_typed_constructors_and_parsing() {
+        assert_parses_datetime!(BDT);
+        assert_parses_datetime!(GLONASST);
+        assert_parses_datetime!(GPST);
+        assert_parses_datetime!(GST);
+        assert_parses_datetime!(QZZST);
+        assert_parses_datetime!(TAI);
+        assert_parses_datetime!(TCB);
+        assert_parses_datetime!(TCG);
+        assert_parses_datetime!(TDB);
+        assert_parses_datetime!(TT);
+        assert_parses_datetime!(UT1);
+        assert_parses_datetime!(UTC);
+        assert!(Time::<UTC>::from_isot_str("not a datetime").is_err());
+        assert!(Time::<UTC>::from_isot_str("2000-01-01T12:00:00Z").is_err());
+    }
+
+    #[test]
+    fn test_typed_parsers_support_optional_fractional_seconds_and_custom_formats() {
+        let expected = Time::<TAI>::from_datetime(
+            NaiveDate::from_ymd_opt(2000, 1, 1)
+                .unwrap()
+                .and_hms_opt(12, 0, 0)
+                .unwrap(),
+        );
+
+        assert_eq!(
+            Time::<TAI>::from_isot_str("2000-01-01T12:00:00").unwrap(),
+            expected
+        );
+        assert_eq!(
+            Time::<TAI>::from_iso_str("2000-01-01 12:00:00").unwrap(),
+            expected
+        );
+        assert_eq!(
+            Time::<TAI>::from_str("00/01/01 12:00", "%y/%m/%d %H:%M").unwrap(),
+            expected
+        );
+    }
+
+    #[test]
+    fn test_typed_parsers_reject_invalid_inputs() {
+        assert!(Time::<UTC>::from_iso_str("2000-01-01T12:00:00").is_err());
+        assert!(Time::<UTC>::from_str("2000-01-01", "%Y-%m-%dT%H:%M:%S").is_err());
+        assert!("2000-01-01T12:00:00Z".parse::<Time<UTC>>().is_err());
+        assert!(Time::<UTC>::from_isot_str("2016-12-31T23:59:61").is_err());
+    }
+
+    #[test]
     fn test_utc_gregorian_leap_second() {
         let gregorian = NaiveDate::from_ymd_opt(2016, 12, 31)
             .unwrap()
@@ -429,6 +558,10 @@ mod tests {
         let time = Time::<UTC>::from_gregorian(gregorian);
 
         assert_eq!(time.gregorian(), gregorian);
+        assert_eq!(
+            Time::<UTC>::from_isot_str("2016-12-31T23:59:60").unwrap(),
+            time
+        );
     }
 
     #[cfg(feature = "serde")]

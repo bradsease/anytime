@@ -55,6 +55,17 @@
 //! # assert_eq!(utc, AnyTime::from_jd(2_451_545.0, TimeScale::UTC));
 //! ```
 //!
+//! Typed values also support the same parsing constructors. [`std::str::FromStr`]
+//! assumes an ISO 8601 `T`-separated date and time without an offset, interpreted
+//! in the type's scale:
+//!
+//! ```
+//! use anytime::{Time, scales::UTC};
+//!
+//! let utc: Time<UTC> = "2000-01-01T12:00:00".parse().unwrap();
+//! # assert_eq!(utc, Time::<UTC>::from_jd(2_451_545.0));
+//! ```
+//!
 //! The crate supports UTC, TAI, TT, TCG, TCB, TDB, and UT1. Its GNSS scales are
 //! BDT, GLONASST, GPST, GST, and QZZST. UTC conversions use leap-second data built
 //! into the crate. UT1 conversions additionally use Earth-orientation data loaded

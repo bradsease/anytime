@@ -62,6 +62,19 @@ let utc = AnyTime::from_isot_str("2000-01-01T12:00:00", TimeScale::UTC).unwrap()
 assert_eq!(utc, AnyTime::from_jd(2_451_545.0, TimeScale::UTC));
 ```
 
+### Parse a typed time
+
+`Time<S>` provides the same parsing constructors as `AnyTime`. Its `FromStr`
+implementation assumes an ISO 8601 `T`-separated date and time without an
+offset, interpreted in `S`.
+
+```rust
+use anytime::{scales::UTC, Time};
+
+let utc: Time<UTC> = "2000-01-01T12:00:00".parse().unwrap();
+assert_eq!(utc, Time::<UTC>::from_jd(2_451_545.0));
+```
+
 ## Benchmarks
 
 Run the scale conversion benchmarks with Criterion:
