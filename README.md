@@ -8,7 +8,7 @@ Supported scales are UTC, TAI, TT, TCG, TCB, TDB, and UT1. GNSS scales are
 BDT, GLONASST, GPST, GST, and QZZST.
 
 Enable the optional `serde` feature to serialize and deserialize `Time`,
-`AnyTime`, `TimeSeries`, and `TimeScale` values.
+`AnyTime`, `TimeSeries`, `AnyTimeSeries`, and `TimeScale` values.
 
 ## Examples
 
@@ -73,6 +73,21 @@ use anytime::{scales::UTC, Time};
 
 let utc: Time<UTC> = "2000-01-01T12:00:00".parse().unwrap();
 assert_eq!(utc, Time::<UTC>::from_jd(2_451_545.0));
+```
+
+### Store a runtime-scale series
+
+Use `AnyTimeSeries` when the scale is selected at runtime. It stores the scale
+once for the entire homogeneous collection.
+
+```rust
+use anytime::{AnyTimeSeries, Time, TimeSeries, scales::{TAI, UTC}};
+
+let tai = TimeSeries::new(vec![Time::<TAI>::from_jd(2_451_545.0)]);
+let series: AnyTimeSeries = tai.into();
+let utc: TimeSeries<UTC> = series.into();
+
+assert_eq!(utc.len(), 1);
 ```
 
 ## Benchmarks
