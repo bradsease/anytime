@@ -209,6 +209,19 @@ impl AnyTimeSeries {
             Self::UTC(series) => AnyTimeSeriesIterInner::UTC(series.iter()),
         })
     }
+
+    /// Iterates over signed physical intervals between adjacent stored times.
+    ///
+    /// A series with fewer than two values yields no intervals. Intervals can
+    /// be negative when the stored times are not in ascending order.
+    pub fn intervals(&self) -> impl Iterator<Item = TimeDelta> + '_ {
+        let mut previous = None;
+        self.iter().filter_map(move |time| {
+            previous
+                .replace(time.clone())
+                .map(|previous| time - previous)
+        })
+    }
 }
 
 impl Iterator for AnyTimeSeriesIter<'_> {
@@ -373,6 +386,22 @@ mod tests {
         assert_eq!(
             series.iter().collect::<Vec<_>>(),
             vec![AnyTime::TAI(tai(0)), AnyTime::TAI(tai(0))]
+        );
+    }
+
+    #[test]
+    fn intervals_follow_stored_order() {
+        let series: AnyTimeSeries = TimeSeries::new(vec![tai(0), tai(2), tai(1)]).into();
+
+        assert_eq!(
+            series.intervals().collect::<Vec<_>>(),
+            vec![TimeDelta::seconds(2), TimeDelta::seconds(-1)]
+        );
+        assert_eq!(
+            AnyTimeSeries::from_times(Vec::new(), TimeScale::UTC)
+                .intervals()
+                .count(),
+            0
         );
     }
 
