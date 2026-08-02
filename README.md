@@ -1,6 +1,10 @@
 # anytime
 Ergonomic astronomical rust timescales
 
+[![GitHub Release](https://img.shields.io/github/v/release/bradsease/anytime)](https://github.com/bradsease/anytime/releases) [![GitHub](https://img.shields.io/github/license/bradsease/anytime)](https://github.com/bradsease/anytime/blob/main/LICENSE)
+
+[![GitHub last commit](https://img.shields.io/github/last-commit/bradsease/anytime)](https://github.com/bradsease/anytime) [![Pipeline Status](https://github.com/bradsease/anytime/actions/workflows/rust-tests.yml/badge.svg)](https://github.com/bradsease/anytime/actions/workflows/rust-tests.yml) [![Coverage Status](https://coveralls.io/repos/github/bradsease/anytime/badge.svg)](https://coveralls.io/github/bradsease/anytime)
+
 `anytime` provides astronomical time scales and conversions with nanosecond
 resolution. [`Time`](https://docs.rs/anytime/latest/anytime/struct.Time.html)
 stores an instant with a type-level scale, making changes of scale explicit.
