@@ -189,6 +189,26 @@ impl AnyTimeSeries {
         with_series!(self, |series| series.last().cloned().map(Into::into))
     }
 
+    /// Sorts the series in ascending physical order.
+    pub fn sort(&mut self) {
+        with_series!(self, |series| series.sort())
+    }
+
+    /// Reverses the stored order of the series.
+    pub fn reverse(&mut self) {
+        with_series!(self, |series| series.reverse())
+    }
+
+    /// Appends a time after converting it to the series' common scale.
+    pub fn push(&mut self, time: AnyTime) {
+        with_series!(self, |series| series.push(time.into()))
+    }
+
+    /// Consumes the series and returns its values in stored order.
+    pub fn into_vec(self) -> Vec<AnyTime> {
+        self.into_iter().collect()
+    }
+
     /// Iterates over the time values in their stored order.
     ///
     /// Values are returned as owned [`AnyTime`] instances because the concrete
@@ -359,6 +379,33 @@ mod tests {
         );
         let into_iter: AnyTimeSeriesIntoIter = series.into_iter();
         assert_eq!(into_iter.count(), 3);
+    }
+
+    #[test]
+    fn supports_collection_operations() {
+        let mut series: AnyTimeSeries = TimeSeries::new(vec![tai(2), tai(0)]).into();
+
+        series.push(AnyTime::UTC(tai(1).utc()));
+        assert_eq!(series.scale(), TimeScale::TAI);
+        assert_eq!(
+            series.iter().collect::<Vec<_>>(),
+            vec![
+                AnyTime::TAI(tai(2)),
+                AnyTime::TAI(tai(0)),
+                AnyTime::TAI(tai(1))
+            ]
+        );
+
+        series.sort();
+        series.reverse();
+        assert_eq!(
+            series.into_vec(),
+            vec![
+                AnyTime::TAI(tai(2)),
+                AnyTime::TAI(tai(1)),
+                AnyTime::TAI(tai(0))
+            ]
+        );
     }
 
     #[test]

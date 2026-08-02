@@ -77,6 +77,31 @@ impl<S> TimeSeries<S> {
         self.times.last()
     }
 
+    /// Returns a mutable reference to the time at `index`.
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut Time<S>> {
+        self.times.get_mut(index)
+    }
+
+    /// Appends a time to the end of the series.
+    pub fn push(&mut self, time: Time<S>) {
+        self.times.push(time);
+    }
+
+    /// Sorts the series in ascending physical order.
+    pub fn sort(&mut self) {
+        self.times.sort();
+    }
+
+    /// Reverses the stored order of the series.
+    pub fn reverse(&mut self) {
+        self.times.reverse();
+    }
+
+    /// Consumes the series and returns its time values in stored order.
+    pub fn into_vec(self) -> Vec<Time<S>> {
+        self.times
+    }
+
     /// Returns the time values in their stored order.
     pub fn as_slice(&self) -> &[Time<S>] {
         &self.times
@@ -215,6 +240,21 @@ mod tests {
 
         assert_eq!(series.as_slice(), &[tai(2), tai(0), tai(1)]);
         assert_eq!(series.duration(), TimeDelta::seconds(2));
+    }
+
+    #[test]
+    fn supports_collection_operations() {
+        let mut series = TimeSeries::new(vec![tai(2), tai(0)]);
+
+        series.push(tai(1));
+        *series.get_mut(1).unwrap() = tai(3);
+        assert_eq!(series.get_mut(3), None);
+        assert_eq!(series.as_slice(), &[tai(2), tai(3), tai(1)]);
+
+        series.sort();
+        assert_eq!(series.as_slice(), &[tai(1), tai(2), tai(3)]);
+        series.reverse();
+        assert_eq!(series.into_vec(), vec![tai(3), tai(2), tai(1)]);
     }
 
     #[test]
