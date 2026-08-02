@@ -164,6 +164,18 @@ impl AnyTimeSeries {
         }
     }
 
+    /// Converts every value to `scale` and returns a runtime-scale series.
+    ///
+    /// Stored order and length are preserved. When the series already uses the
+    /// requested scale, it is returned unchanged.
+    pub fn convert(self, scale: TimeScale) -> Self {
+        if self.scale() == scale {
+            return self;
+        }
+
+        Self::from_times(self, scale)
+    }
+
     /// Returns the number of time values in the series.
     pub fn len(&self) -> usize {
         with_series!(self, |series| series.len())
@@ -187,6 +199,77 @@ impl AnyTimeSeries {
     /// Returns the final time in the series.
     pub fn last(&self) -> Option<AnyTime> {
         with_series!(self, |series| series.last().cloned().map(Into::into))
+    }
+
+    /// Sorts the series in ascending physical order.
+    pub fn sort(&mut self) {
+        with_series!(self, |series| series.sort())
+    }
+
+    /// Reverses the stored order of the series.
+    pub fn reverse(&mut self) {
+        with_series!(self, |series| series.reverse())
+    }
+
+    /// Appends a time after converting it to the series' common scale.
+    pub fn push(&mut self, time: AnyTime) {
+        with_series!(self, |series| series.push(time.into()))
+    }
+
+    /// Consumes the series and returns its values in stored order.
+    pub fn into_vec(self) -> Vec<AnyTime> {
+        self.into_iter().collect()
+    }
+
+    /// Returns the time at `index`, or `None` when the index is out of bounds.
+    pub fn get(&self, index: usize) -> Option<AnyTime> {
+        with_series!(self, |series| series.get(index).cloned().map(Into::into))
+    }
+
+    /// Returns the earliest physical time in the series.
+    ///
+    /// Stored order is ignored. When the earliest time occurs more than once,
+    /// the first occurrence is returned.
+    pub fn earliest(&self) -> Option<AnyTime> {
+        with_series!(self, |series| series.earliest().cloned().map(Into::into))
+    }
+
+    /// Returns the latest physical time in the series.
+    ///
+    /// Stored order is ignored. When the latest time occurs more than once,
+    /// the first occurrence is returned.
+    pub fn latest(&self) -> Option<AnyTime> {
+        with_series!(self, |series| series.latest().cloned().map(Into::into))
+    }
+
+    /// Returns whether the series contains the same physical instant as `time`.
+    pub fn contains(&self, time: &AnyTime) -> bool {
+        self.iter().any(|candidate| candidate == *time)
+    }
+
+    /// Returns whether the times are in ascending physical order.
+    pub fn is_sorted(&self) -> bool {
+        with_series!(self, |series| series.is_sorted())
+    }
+
+    /// Returns the stored time nearest to `time` as a physical instant.
+    ///
+    /// When two values are equally near, the first one in stored order is
+    /// returned.
+    pub fn nearest(&self, time: &AnyTime) -> Option<AnyTime> {
+        self.iter()
+            .min_by_key(|candidate| (candidate.clone() - time.clone()).abs())
+    }
+
+    /// Iterates over times within the inclusive physical interval.
+    ///
+    /// Values are yielded in stored order and duplicates are preserved. The
+    /// iterator is empty when `start` is later than `end`.
+    pub fn within(&self, start: &AnyTime, end: &AnyTime) -> impl Iterator<Item = AnyTime> + '_ {
+        let start = start.clone();
+        let end = end.clone();
+        self.iter()
+            .filter(move |time| time >= &start && time <= &end)
     }
 
     /// Iterates over the time values in their stored order.
@@ -425,6 +508,67 @@ mod tests {
     }
 
     #[test]
+    fn supports_collection_operations() {
+        let mut series: AnyTimeSeries = TimeSeries::new(vec![tai(2), tai(0)]).into();
+
+        series.push(AnyTime::UTC(tai(1).utc()));
+        assert_eq!(series.scale(), TimeScale::TAI);
+        assert_eq!(
+            series.iter().collect::<Vec<_>>(),
+            vec![
+                AnyTime::TAI(tai(2)),
+                AnyTime::TAI(tai(0)),
+                AnyTime::TAI(tai(1))
+            ]
+        );
+
+        series.sort();
+        series.reverse();
+        assert_eq!(
+            series.into_vec(),
+            vec![
+                AnyTime::TAI(tai(2)),
+                AnyTime::TAI(tai(1)),
+                AnyTime::TAI(tai(0))
+            ]
+        );
+    }
+
+    #[test]
+    fn exposes_read_only_queries() {
+        let series: AnyTimeSeries =
+            TimeSeries::new(vec![tai(3), tai(1), tai(2), tai(1), tai(0)]).into();
+
+        assert_eq!(series.get(1), Some(AnyTime::TAI(tai(1))));
+        assert_eq!(series.get(5), None);
+        assert_eq!(series.earliest(), Some(AnyTime::TAI(tai(0))));
+        assert_eq!(series.latest(), Some(AnyTime::TAI(tai(3))));
+        assert!(series.contains(&AnyTime::UTC(tai(2).utc())));
+        assert!(!series.contains(&AnyTime::UTC(tai(4).utc())));
+        assert!(!series.is_sorted());
+        assert_eq!(
+            series.nearest(&AnyTime::UTC(tai(1).utc())),
+            Some(AnyTime::TAI(tai(1)))
+        );
+        assert_eq!(
+            series
+                .within(&AnyTime::UTC(tai(1).utc()), &AnyTime::TAI(tai(2)))
+                .collect::<Vec<_>>(),
+            vec![
+                AnyTime::TAI(tai(1)),
+                AnyTime::TAI(tai(2)),
+                AnyTime::TAI(tai(1))
+            ]
+        );
+        assert_eq!(
+            series
+                .within(&AnyTime::TAI(tai(2)), &AnyTime::TAI(tai(1)))
+                .count(),
+            0
+        );
+    }
+
+    #[test]
     fn every_variant_supports_common_operations_and_runtime_conversion() {
         for series in series_for_each_scale() {
             let scale = series.scale();
@@ -519,6 +663,52 @@ mod tests {
                 .count(),
             0
         );
+    }
+
+    #[test]
+    fn converts_to_a_runtime_selected_scale() {
+        let scales = [
+            TimeScale::BDT,
+            TimeScale::GLONASST,
+            TimeScale::GPST,
+            TimeScale::GST,
+            TimeScale::QZZST,
+            TimeScale::TAI,
+            TimeScale::TCB,
+            TimeScale::TCG,
+            TimeScale::TDB,
+            TimeScale::TT,
+            TimeScale::UT1,
+            TimeScale::UTC,
+        ];
+
+        for scale in scales {
+            let series: AnyTimeSeries = TimeSeries::new(vec![tai(0), tai(1)]).into();
+            let converted = series.convert(scale);
+
+            assert_eq!(converted.scale(), scale);
+            assert_eq!(converted.len(), 2);
+            assert_eq!(
+                converted.iter().collect::<Vec<_>>(),
+                vec![
+                    AnyTime::TAI(tai(0)).convert(scale),
+                    AnyTime::TAI(tai(1)).convert(scale)
+                ]
+            );
+        }
+    }
+
+    #[test]
+    fn convert_preserves_an_empty_series_scale() {
+        let series = AnyTimeSeries::from_times(Vec::new(), TimeScale::TAI);
+
+        let utc = series.convert(TimeScale::UTC);
+        assert_eq!(utc.scale(), TimeScale::UTC);
+        assert!(utc.is_empty());
+
+        let utc = utc.convert(TimeScale::UTC);
+        assert_eq!(utc.scale(), TimeScale::UTC);
+        assert!(utc.is_empty());
     }
 
     #[test]

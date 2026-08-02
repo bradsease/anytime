@@ -77,6 +77,103 @@ impl<S> TimeSeries<S> {
         self.times.last()
     }
 
+    /// Returns a mutable reference to the time at `index`.
+    pub fn get_mut(&mut self, index: usize) -> Option<&mut Time<S>> {
+        self.times.get_mut(index)
+    }
+
+    /// Appends a time to the end of the series.
+    pub fn push(&mut self, time: Time<S>) {
+        self.times.push(time);
+    }
+
+    /// Sorts the series in ascending physical order.
+    pub fn sort(&mut self) {
+        self.times.sort();
+    }
+
+    /// Reverses the stored order of the series.
+    pub fn reverse(&mut self) {
+        self.times.reverse();
+    }
+
+    /// Consumes the series and returns its time values in stored order.
+    pub fn into_vec(self) -> Vec<Time<S>> {
+        self.times
+    }
+
+    /// Returns the time at `index`, or `None` when the index is out of bounds.
+    pub fn get(&self, index: usize) -> Option<&Time<S>> {
+        self.times.get(index)
+    }
+
+    /// Returns the earliest physical time in the series.
+    ///
+    /// Stored order is ignored. When the earliest time occurs more than once,
+    /// the first occurrence is returned.
+    pub fn earliest(&self) -> Option<&Time<S>> {
+        self.times.iter().min()
+    }
+
+    /// Returns the latest physical time in the series.
+    ///
+    /// Stored order is ignored. When the latest time occurs more than once,
+    /// the first occurrence is returned.
+    pub fn latest(&self) -> Option<&Time<S>> {
+        self.times
+            .iter()
+            .reduce(|latest, time| if time > latest { time } else { latest })
+    }
+
+    /// Returns whether the series contains the same physical instant as `time`.
+    pub fn contains<T>(&self, time: &Time<T>) -> bool
+    where
+        Time<T>: Into<Time<S>>,
+    {
+        self.times.iter().any(|candidate| candidate == time)
+    }
+
+    /// Returns whether the times are in ascending physical order.
+    pub fn is_sorted(&self) -> bool {
+        self.times.windows(2).all(|pair| pair[0] <= pair[1])
+    }
+
+    /// Returns the stored time nearest to `time` as a physical instant.
+    ///
+    /// When two values are equally near, the first one in stored order is
+    /// returned.
+    pub fn nearest<T>(&self, time: &Time<T>) -> Option<&Time<S>>
+    where
+        Time<S>: Into<Time<TAI>>,
+        Time<T>: Into<Time<TAI>>,
+    {
+        let time: Time<TAI> = time.clone().into();
+        self.times.iter().min_by_key(|candidate| {
+            let candidate: Time<TAI> = (*candidate).clone().into();
+            (candidate.value - time.value).abs()
+        })
+    }
+
+    /// Iterates over times within the inclusive physical interval.
+    ///
+    /// Values are yielded in stored order and duplicates are preserved. The
+    /// iterator is empty when `start` is later than `end`.
+    pub fn within<T, U>(
+        &self,
+        start: &Time<T>,
+        end: &Time<U>,
+    ) -> impl Iterator<Item = &Time<S>> + '_
+    where
+        Time<T>: Into<Time<S>>,
+        Time<U>: Into<Time<S>>,
+    {
+        let start: Time<S> = start.clone().into();
+        let end: Time<S> = end.clone().into();
+        self.times
+            .iter()
+            .filter(move |time| *time >= &start && *time <= &end)
+    }
+
     /// Returns the time values in their stored order.
     pub fn as_slice(&self) -> &[Time<S>] {
         &self.times
@@ -228,6 +325,58 @@ mod tests {
 
         assert_eq!(series.as_slice(), &[tai(2), tai(0), tai(1)]);
         assert_eq!(series.duration(), TimeDelta::seconds(2));
+    }
+
+    #[test]
+    fn supports_collection_operations() {
+        let mut series = TimeSeries::new(vec![tai(2), tai(0)]);
+
+        series.push(tai(1));
+        *series.get_mut(1).unwrap() = tai(3);
+        assert_eq!(series.get_mut(3), None);
+        assert_eq!(series.as_slice(), &[tai(2), tai(3), tai(1)]);
+
+        series.sort();
+        assert_eq!(series.as_slice(), &[tai(1), tai(2), tai(3)]);
+        series.reverse();
+        assert_eq!(series.into_vec(), vec![tai(3), tai(2), tai(1)]);
+    }
+
+    #[test]
+    fn queries_stored_and_physical_order() {
+        let series = TimeSeries::new(vec![tai(2), tai(0), tai(1), tai(0)]);
+
+        assert_eq!(series.get(1), Some(&tai(0)));
+        assert_eq!(series.get(4), None);
+        assert_eq!(series.earliest(), Some(&tai(0)));
+        assert_eq!(series.latest(), Some(&tai(2)));
+        assert!(series.contains(&tai(1).utc()));
+        assert!(!series.contains(&tai(3).utc()));
+        assert!(!series.is_sorted());
+        assert!(TimeSeries::new(vec![tai(0), tai(0), tai(1)]).is_sorted());
+    }
+
+    #[test]
+    fn nearest_uses_physical_distance_and_stored_order_for_ties() {
+        let series = TimeSeries::new(vec![tai(2), tai(0), tai(4)]);
+
+        assert_eq!(series.nearest(&tai(1).utc()), Some(&tai(2)));
+        assert_eq!(series.nearest(&tai(4).utc()), Some(&tai(4)));
+        assert_eq!(TimeSeries::<TAI>::new(vec![]).nearest(&tai(0)), None);
+    }
+
+    #[test]
+    fn within_is_inclusive_and_preserves_stored_order() {
+        let series = TimeSeries::new(vec![tai(3), tai(1), tai(2), tai(1), tai(0)]);
+
+        assert_eq!(
+            series
+                .within(&tai(1).utc(), &tai(2))
+                .cloned()
+                .collect::<Vec<_>>(),
+            vec![tai(1), tai(2), tai(1)]
+        );
+        assert_eq!(series.within(&tai(2), &tai(1)).count(), 0);
     }
 
     #[test]
