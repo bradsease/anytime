@@ -55,6 +55,20 @@
 //! # assert_eq!(utc, AnyTime::from_jd(2_451_545.0, TimeScale::UTC));
 //! ```
 //!
+//! When the scale for a whole collection is selected at runtime, use
+//! [`AnyTimeSeries`]. It stores the scale once while retaining a homogeneous
+//! typed series internally:
+//!
+//! ```
+//! use anytime::{AnyTimeSeries, Time, TimeSeries, scales::{TAI, UTC}};
+//!
+//! let tai = TimeSeries::new(vec![Time::<TAI>::from_jd(2_451_545.0)]);
+//! let series: AnyTimeSeries = tai.into();
+//! let utc: TimeSeries<UTC> = series.into();
+//!
+//! assert_eq!(utc.len(), 1);
+//! ```
+//!
 //! Convert a runtime-selected value to another runtime-selected scale with
 //! [`AnyTime::convert`]:
 //!
@@ -92,15 +106,17 @@
 //! - Use the `From`/`Into` implementations or [`Time::utc`], [`Time::tai`], and
 //!   the other scale methods to convert values.
 //! - Use [`TimeSeries`] for stored collections or [`TimeSeries::range_iter`]
-//!   for lazy ranges.
+//!   for lazy ranges. Use [`AnyTimeSeries`] when the common series scale is
+//!   selected at runtime.
 //! - Use [`AnyTime`] when a collection may contain values from multiple scales.
 //! - Enable the `serde` feature to serialize and deserialize [`Time`],
-//!   [`AnyTime`], [`TimeSeries`], and [`TimeScale`] values.
+//!   [`AnyTime`], [`TimeSeries`], [`AnyTimeSeries`], and [`TimeScale`] values.
 //!
 // Astronomical time-scale names intentionally retain their standard acronyms.
 #![allow(clippy::upper_case_acronyms)]
 #![deny(missing_docs)]
 
+mod any_series;
 mod anytime;
 mod constants;
 mod eop;
@@ -111,6 +127,7 @@ pub mod scales;
 mod series;
 mod time;
 
+pub use any_series::{AnyTimeSeries, AnyTimeSeriesIntoIter, AnyTimeSeriesIter};
 pub use anytime::AnyTime;
 pub use eop::{load_finals2000a, FinalsLoadError};
 pub use scales::{
