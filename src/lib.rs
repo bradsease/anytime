@@ -55,9 +55,10 @@
 //! # assert_eq!(utc, AnyTime::from_jd(2_451_545.0, TimeScale::UTC));
 //! ```
 //!
-//! The crate supports UTC, TAI, BDT, GLONASST, GPST, GST, QZZST, TT, TCG, TCB,
-//! TDB, and UT1. UTC conversions use leap-second data built into the crate. UT1
-//! conversions additionally use Earth-orientation data loaded with [`load_finals2000a`].
+//! The crate supports UTC, TAI, TT, TCG, TCB, TDB, and UT1. Its GNSS scales are
+//! BDT, GLONASST, GPST, GST, and QZZST. UTC conversions use leap-second data built
+//! into the crate. UT1 conversions additionally use Earth-orientation data loaded
+//! with [`load_finals2000a`].
 //!
 //! # Feature overview
 //!

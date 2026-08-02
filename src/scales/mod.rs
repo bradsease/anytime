@@ -3,9 +3,10 @@
 
 //! Marker types and runtime selection for the time scales supported by [`crate::Time`].
 //!
-//! The long-form marker names are [`BDT`], [`GLONASST`], [`GPST`], [`GST`],
-//! [`QZZST`], [`TAI`], [`TCB`], [`TCG`], [`TDB`], [`TT`], [`UT1`], and [`UTC`].
-//! [`GPS`], [`TDT`], and [`UT`] are aliases for the corresponding standard names.
+//! The main marker names are [`TAI`], [`TCB`], [`TCG`], [`TDB`], [`TT`], [`UT1`],
+//! and [`UTC`]. The GNSS marker names are [`BDT`], [`GLONASST`], [`GPST`], [`GST`],
+//! and [`QZZST`]. [`GPS`], [`TDT`], and [`UT`] are aliases for the corresponding
+//! standard names.
 
 mod bdt;
 pub(crate) mod common;
