@@ -2,7 +2,10 @@ pub(crate) static JD_TO_MJD: f64 = 2400000.5;
 pub(crate) static DAY_SECONDS: f64 = 86400.0;
 pub(crate) static JD_TO_UNIX_SECONDS: i64 = 210866760000;
 pub(crate) static TAI_TT: f64 = 32.184;
+pub(crate) static TAI_BDT: f64 = 33.0;
 pub(crate) static TAI_GPS: f64 = 19.0;
+pub(crate) static TAI_GST: f64 = 19.0;
+pub(crate) static GLONASST_UTC: f64 = 10_800.0;
 
 // Each entry is (UTC start JD, base TAI-UTC seconds, reference MJD, drift seconds/day).
 pub(crate) const TAI_UTC: &[(f64, f64, f64, f64)] = &[
