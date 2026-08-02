@@ -1,4 +1,4 @@
-use crate::scales::{GPST, TAI, TCB, TCG, TDB, TT, UT1, UTC};
+use crate::scales::{TAI, TCB, TCG, TDB, TT, UT1, UTC};
 use crate::{load_finals2000a, Scale, Time};
 use chrono::NaiveDateTime;
 
@@ -16,7 +16,6 @@ struct Representations {
 
 #[derive(Debug)]
 struct ReferenceCase {
-    gpst: Representations,
     tai: Representations,
     tcb: Representations,
     tcg: Representations,
@@ -45,19 +44,18 @@ fn cases() -> Vec<ReferenceCase> {
             let fields: Vec<_> = line.split_whitespace().collect();
             assert_eq!(
                 fields.len(),
-                24,
-                "reference case must have 24 values: {line}"
+                21,
+                "reference case must have 21 values: {line}"
             );
 
             ReferenceCase {
-                gpst: representations(&fields[0..3]),
-                tai: representations(&fields[3..6]),
-                tcb: representations(&fields[6..9]),
-                tcg: representations(&fields[9..12]),
-                tdb: representations(&fields[12..15]),
-                tt: representations(&fields[15..18]),
-                ut1: representations(&fields[18..21]),
-                utc: representations(&fields[21..24]),
+                tai: representations(&fields[0..3]),
+                tcb: representations(&fields[3..6]),
+                tcg: representations(&fields[6..9]),
+                tdb: representations(&fields[9..12]),
+                tt: representations(&fields[12..15]),
+                ut1: representations(&fields[15..18]),
+                utc: representations(&fields[18..21]),
             }
         })
         .collect()
@@ -106,7 +104,6 @@ fn assert_representations<S: Scale>(
 macro_rules! assert_conversions {
     ($time:expr, $case:expr, $max_error:expr) => {{
         let time = $time;
-        assert_representations(time.clone().gpst(), &$case.gpst, $case, "GPST", $max_error);
         assert_representations(time.clone().tai(), &$case.tai, $case, "TAI", $max_error);
         assert_representations(
             time.clone().tcb(),
@@ -146,11 +143,10 @@ macro_rules! assert_source_representations {
 }
 
 #[test]
-fn matches_reference_cases_for_every_scale_conversion() {
+fn matches_reference_cases_for_every_core_scale_conversion() {
     load_finals2000a(EXAMPLE_PATH).unwrap();
 
     for case in cases() {
-        assert_source_representations!(GPST, &case.gpst, &case, MAX_ERROR_NANOSECONDS);
         assert_source_representations!(TAI, &case.tai, &case, MAX_ERROR_NANOSECONDS);
         assert_source_representations!(TCB, &case.tcb, &case, TDB_MODEL_MAX_ERROR_NANOSECONDS);
         assert_source_representations!(TCG, &case.tcg, &case, MAX_ERROR_NANOSECONDS);

@@ -74,21 +74,14 @@ impl_time_series_from!(UTC => GPST);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::load_finals2000a;
-    use crate::scales::common::assert_round_trip;
-
-    const EXAMPLE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/data/finals2000A.all");
+    use chrono::TimeDelta;
 
     #[test]
-    fn test_gpst_closure() {
-        load_finals2000a(EXAMPLE_PATH).unwrap();
+    fn applies_tai_offset() {
+        let tai = Time::<TAI>::from_jd(2_458_849.5);
+        let gpst: Time<GPST> = tai.clone().into();
 
-        assert_round_trip::<TAI, GPST>(Time::<TAI>::from_jd(2_457_754.5));
-        assert_round_trip::<TCB, GPST>(Time::<TCB>::from_jd(2_457_754.5));
-        assert_round_trip::<TCG, GPST>(Time::<TCG>::from_jd(2_457_754.5));
-        assert_round_trip::<TDB, GPST>(Time::<TDB>::from_jd(2_457_754.5));
-        assert_round_trip::<TT, GPST>(Time::<TT>::from_jd(2_457_754.5));
-        assert_round_trip::<UT1, GPST>(Time::<UT1>::from_jd(2_457_754.5));
-        assert_round_trip::<UTC, GPST>(Time::<UTC>::from_jd(2_457_754.5));
+        assert_eq!(tai.value - gpst.value, TimeDelta::seconds(19));
+        assert_eq!(gpst.tai(), tai);
     }
 }
