@@ -100,7 +100,7 @@ pub mod scales;
 mod series;
 mod time;
 
-pub use anytime::{AnyTime, AnyTimeVec};
+pub use anytime::AnyTime;
 pub use eop::{load_finals2000a, FinalsLoadError};
 pub use scales::{
     TimeScale, TimeScaleParseError, BDT, GLONASST, GPS, GPST, GST, QZZST, TAI, TCB, TCG, TDB, TDT,
