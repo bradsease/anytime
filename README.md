@@ -21,6 +21,16 @@ let utc = Time::<UTC>::from_jd(2_451_545.0);
 let tai: Time<TAI> = utc.into();
 ```
 
+When the target scale is selected at runtime, use `AnyTime::convert`:
+
+```rust
+use anytime::{AnyTime, TimeScale};
+
+let utc = AnyTime::from_jd(2_451_545.0, TimeScale::UTC);
+let tai = utc.convert(TimeScale::TAI);
+assert_eq!(tai.scale(), TimeScale::TAI);
+```
+
 ### Compare and difference
 
 Values can be compared and differenced directly, even when they use different

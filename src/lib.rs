@@ -69,6 +69,17 @@
 //! assert_eq!(utc.len(), 1);
 //! ```
 //!
+//! Convert a runtime-selected value to another runtime-selected scale with
+//! [`AnyTime::convert`]:
+//!
+//! ```
+//! use anytime::{AnyTime, TimeScale};
+//!
+//! let utc = AnyTime::from_jd(2_451_545.0, TimeScale::UTC);
+//! let tai = utc.convert(TimeScale::TAI);
+//! # assert_eq!(tai.scale(), TimeScale::TAI);
+//! ```
+//!
 //! Typed values also support the same parsing constructors. [`std::str::FromStr`]
 //! assumes an ISO 8601 `T`-separated date and time without an offset, interpreted
 //! in the type's scale:
