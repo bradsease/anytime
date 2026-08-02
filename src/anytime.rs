@@ -67,6 +67,24 @@ impl AnyTime {
         }
     }
 
+    /// Converts this time to `scale` and returns it with a runtime-selected scale.
+    pub fn convert(self, scale: TimeScale) -> Self {
+        match scale {
+            TimeScale::BDT => self.bdt().into(),
+            TimeScale::GLONASST => self.glonasst().into(),
+            TimeScale::GPST => self.gpst().into(),
+            TimeScale::GST => self.gst().into(),
+            TimeScale::QZZST => self.qzzst().into(),
+            TimeScale::TAI => self.tai().into(),
+            TimeScale::TCB => self.tcb().into(),
+            TimeScale::TCG => self.tcg().into(),
+            TimeScale::TDB => self.tdb().into(),
+            TimeScale::TT => self.tt().into(),
+            TimeScale::UT1 => self.ut1().into(),
+            TimeScale::UTC => self.utc().into(),
+        }
+    }
+
     /// Creates a time from a proleptic Gregorian date and time in `scale`.
     ///
     /// # Examples
@@ -452,6 +470,31 @@ mod tests {
 
         for (time, scale) in times.iter().zip(scales) {
             assert_eq!(time.scale(), scale);
+        }
+    }
+
+    #[test]
+    fn test_convert() {
+        let time = AnyTime::from_jd(2_451_545.0, TimeScale::UTC);
+        let scales = [
+            TimeScale::BDT,
+            TimeScale::GLONASST,
+            TimeScale::GPST,
+            TimeScale::GST,
+            TimeScale::QZZST,
+            TimeScale::TAI,
+            TimeScale::TCB,
+            TimeScale::TCG,
+            TimeScale::TDB,
+            TimeScale::TT,
+            TimeScale::UT1,
+            TimeScale::UTC,
+        ];
+
+        for scale in scales {
+            let converted = time.clone().convert(scale);
+            assert_eq!(converted.scale(), scale);
+            assert_eq!(converted, time);
         }
     }
 
