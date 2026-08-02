@@ -4,7 +4,11 @@ macro_rules! impl_from_anytime {
         impl From<AnyTime> for Time<$scale> {
             fn from(any_time: AnyTime) -> Self {
                 match any_time {
+                    AnyTime::BDT(t) => t.into(),
+                    AnyTime::GLONASST(t) => t.into(),
                     AnyTime::GPST(t) => t.into(),
+                    AnyTime::GST(t) => t.into(),
+                    AnyTime::QZZST(t) => t.into(),
                     AnyTime::TAI(t) => t.into(),
                     AnyTime::TCB(t) => t.into(),
                     AnyTime::TCG(t) => t.into(),
@@ -54,3 +58,35 @@ macro_rules! impl_time_series_from {
 }
 
 pub(crate) use impl_time_series_from;
+
+macro_rules! impl_via_tai {
+    ($source:ty => $target:ty) => {
+        impl From<$crate::Time<$source>> for $crate::Time<$target> {
+            fn from(time: $crate::Time<$source>) -> Self {
+                let tai: $crate::Time<$crate::scales::TAI> = time.into();
+                tai.into()
+            }
+        }
+
+        impl From<$crate::TimeSeries<$source>> for $crate::TimeSeries<$target> {
+            fn from(series: $crate::TimeSeries<$source>) -> Self {
+                Self::new(series.into_iter().map(Into::into).collect())
+            }
+        }
+
+        impl From<$crate::Time<$target>> for $crate::Time<$source> {
+            fn from(time: $crate::Time<$target>) -> Self {
+                let tai: $crate::Time<$crate::scales::TAI> = time.into();
+                tai.into()
+            }
+        }
+
+        impl From<$crate::TimeSeries<$target>> for $crate::TimeSeries<$source> {
+            fn from(series: $crate::TimeSeries<$target>) -> Self {
+                Self::new(series.into_iter().map(Into::into).collect())
+            }
+        }
+    };
+}
+
+pub(crate) use impl_via_tai;

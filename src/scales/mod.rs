@@ -3,12 +3,17 @@
 
 //! Marker types and runtime selection for the time scales supported by [`crate::Time`].
 //!
-//! The long-form marker names are [`GPST`], [`TAI`], [`TCB`], [`TCG`], [`TDB`],
-//! [`TT`], [`UT1`], and [`UTC`]. [`GPS`], [`TDT`], and [`UT`] are aliases for the
-//! corresponding standard names.
+//! The main marker names are [`TAI`], [`TCB`], [`TCG`], [`TDB`], [`TT`], [`UT1`],
+//! and [`UTC`]. The GNSS marker names are [`BDT`], [`GLONASST`], [`GPST`], [`GST`],
+//! and [`QZZST`]. [`GPS`], [`TDT`], and [`UT`] are aliases for the corresponding
+//! standard names.
 
+mod bdt;
 pub(crate) mod common;
+mod glonasst;
 mod gpst;
+mod gst;
+mod qzzst;
 mod tai;
 mod tcb;
 mod tcg;
@@ -17,7 +22,11 @@ mod tt;
 mod ut1;
 mod utc;
 
+pub use bdt::BDT;
+pub use glonasst::GLONASST;
 pub use gpst::GPST;
+pub use gst::GST;
+pub use qzzst::QZZST;
 pub use tai::TAI;
 pub use tcb::TCB;
 pub use tcg::TCG;
@@ -34,8 +43,16 @@ use std::str::FromStr;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum TimeScale {
+    /// BeiDou Time.
+    BDT,
+    /// GLONASS Time.
+    GLONASST,
     /// GPS Time.
     GPST,
+    /// Galileo System Time.
+    GST,
+    /// QZSS Time.
+    QZZST,
     /// International Atomic Time.
     TAI,
     /// Barycentric Coordinate Time.
@@ -82,7 +99,11 @@ impl TimeScale {
     /// Returns the standard acronym for this scale.
     pub const fn as_str(self) -> &'static str {
         match self {
+            Self::BDT => "BDT",
+            Self::GLONASST => "GLONASST",
             Self::GPST => "GPST",
+            Self::GST => "GST",
+            Self::QZZST => "QZZST",
             Self::TAI => "TAI",
             Self::TCB => "TCB",
             Self::TCG => "TCG",
@@ -100,8 +121,16 @@ impl TimeScale {
     pub fn parse(value: &str) -> Result<Self, TimeScaleParseError> {
         let value = value.trim();
 
-        if value.eq_ignore_ascii_case("GPST") || value.eq_ignore_ascii_case("GPS") {
+        if value.eq_ignore_ascii_case("BDT") {
+            Ok(Self::BDT)
+        } else if value.eq_ignore_ascii_case("GLONASST") {
+            Ok(Self::GLONASST)
+        } else if value.eq_ignore_ascii_case("GPST") || value.eq_ignore_ascii_case("GPS") {
             Ok(Self::GPST)
+        } else if value.eq_ignore_ascii_case("GST") {
+            Ok(Self::GST)
+        } else if value.eq_ignore_ascii_case("QZZST") {
+            Ok(Self::QZZST)
         } else if value.eq_ignore_ascii_case("TAI") {
             Ok(Self::TAI)
         } else if value.eq_ignore_ascii_case("TCB") {
@@ -138,7 +167,11 @@ mod tests {
     #[test]
     fn parses_time_scale_names_and_aliases() {
         assert_eq!(TimeScale::parse("utc"), Ok(TimeScale::UTC));
+        assert_eq!(TimeScale::parse("bdt"), Ok(TimeScale::BDT));
+        assert_eq!(TimeScale::parse("glonasst"), Ok(TimeScale::GLONASST));
         assert_eq!("GPS".parse(), Ok(TimeScale::GPST));
+        assert_eq!(TimeScale::parse("gst"), Ok(TimeScale::GST));
+        assert_eq!(TimeScale::parse("qzzst"), Ok(TimeScale::QZZST));
         assert_eq!(TimeScale::parse("TDT"), Ok(TimeScale::TT));
         assert_eq!(TimeScale::parse("UT"), Ok(TimeScale::UT1));
         assert!(TimeScale::parse("invalid").is_err());
@@ -147,7 +180,11 @@ mod tests {
     #[test]
     fn formats_and_parses_standard_time_scale_names() {
         let scales = [
+            TimeScale::BDT,
+            TimeScale::GLONASST,
             TimeScale::GPST,
+            TimeScale::GST,
+            TimeScale::QZZST,
             TimeScale::TAI,
             TimeScale::TCB,
             TimeScale::TCG,

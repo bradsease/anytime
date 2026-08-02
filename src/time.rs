@@ -328,7 +328,11 @@ impl<S> Ord for Time<S> {
     }
 }
 
+impl_to_scale!(scales::BDT, bdt);
+impl_to_scale!(scales::GLONASST, glonasst);
 impl_to_scale!(scales::GPST, gpst);
+impl_to_scale!(scales::GST, gst);
+impl_to_scale!(scales::QZZST, qzzst);
 impl_to_scale!(scales::TAI, tai);
 impl_to_scale!(scales::TCB, tcb);
 impl_to_scale!(scales::TCG, tcg);
@@ -340,7 +344,7 @@ impl_to_scale!(scales::UTC, utc);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scales::{GPST, TAI, TCB, TCG, TDB, TT, UT1, UTC};
+    use crate::scales::{BDT, GLONASST, GPST, GST, QZZST, TAI, TCB, TCG, TDB, TT, UT1, UTC};
 
     macro_rules! assert_parses_datetime {
         ($scale:ty) => {{
@@ -498,7 +502,11 @@ mod tests {
 
     #[test]
     fn test_typed_constructors_and_parsing() {
+        assert_parses_datetime!(BDT);
+        assert_parses_datetime!(GLONASST);
         assert_parses_datetime!(GPST);
+        assert_parses_datetime!(GST);
+        assert_parses_datetime!(QZZST);
         assert_parses_datetime!(TAI);
         assert_parses_datetime!(TCB);
         assert_parses_datetime!(TCG);

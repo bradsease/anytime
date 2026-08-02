@@ -22,8 +22,16 @@ use std::ops::Sub;
 #[derive(Debug, Clone)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum AnyTime {
+    /// A value on the BeiDou time scale.
+    BDT(Time<scales::BDT>),
+    /// A value on the GLONASS time scale.
+    GLONASST(Time<scales::GLONASST>),
     /// A value on the GPS time scale.
     GPST(Time<scales::GPST>),
+    /// A value on the Galileo System Time scale.
+    GST(Time<scales::GST>),
+    /// A value on the QZSS time scale.
+    QZZST(Time<scales::QZZST>),
     /// A value on the International Atomic Time scale.
     TAI(Time<scales::TAI>),
     /// A value on the Barycentric Coordinate Time scale.
@@ -44,7 +52,11 @@ impl AnyTime {
     /// Returns the scale associated with this time.
     pub const fn scale(&self) -> TimeScale {
         match self {
+            Self::BDT(_) => TimeScale::BDT,
+            Self::GLONASST(_) => TimeScale::GLONASST,
             Self::GPST(_) => TimeScale::GPST,
+            Self::GST(_) => TimeScale::GST,
+            Self::QZZST(_) => TimeScale::QZZST,
             Self::TAI(_) => TimeScale::TAI,
             Self::TCB(_) => TimeScale::TCB,
             Self::TCG(_) => TimeScale::TCG,
@@ -72,7 +84,11 @@ impl AnyTime {
     /// ```
     pub fn from_datetime(datetime: NaiveDateTime, scale: TimeScale) -> Self {
         match scale {
+            TimeScale::BDT => Time::<scales::BDT>::from_gregorian(datetime).into(),
+            TimeScale::GLONASST => Time::<scales::GLONASST>::from_gregorian(datetime).into(),
             TimeScale::GPST => Time::<scales::GPST>::from_gregorian(datetime).into(),
+            TimeScale::GST => Time::<scales::GST>::from_gregorian(datetime).into(),
+            TimeScale::QZZST => Time::<scales::QZZST>::from_gregorian(datetime).into(),
             TimeScale::TAI => Time::<scales::TAI>::from_gregorian(datetime).into(),
             TimeScale::TCB => Time::<scales::TCB>::from_gregorian(datetime).into(),
             TimeScale::TCG => Time::<scales::TCG>::from_gregorian(datetime).into(),
@@ -86,7 +102,11 @@ impl AnyTime {
     /// Creates a time from a Julian Date in `scale`.
     pub fn from_jd(jd: f64, scale: TimeScale) -> Self {
         match scale {
+            TimeScale::BDT => Time::<scales::BDT>::from_jd(jd).into(),
+            TimeScale::GLONASST => Time::<scales::GLONASST>::from_jd(jd).into(),
             TimeScale::GPST => Time::<scales::GPST>::from_jd(jd).into(),
+            TimeScale::GST => Time::<scales::GST>::from_jd(jd).into(),
+            TimeScale::QZZST => Time::<scales::QZZST>::from_jd(jd).into(),
             TimeScale::TAI => Time::<scales::TAI>::from_jd(jd).into(),
             TimeScale::TCB => Time::<scales::TCB>::from_jd(jd).into(),
             TimeScale::TCG => Time::<scales::TCG>::from_jd(jd).into(),
@@ -100,7 +120,11 @@ impl AnyTime {
     /// Creates a time from a Modified Julian Date in `scale`.
     pub fn from_mjd(mjd: f64, scale: TimeScale) -> Self {
         match scale {
+            TimeScale::BDT => Time::<scales::BDT>::from_mjd(mjd).into(),
+            TimeScale::GLONASST => Time::<scales::GLONASST>::from_mjd(mjd).into(),
             TimeScale::GPST => Time::<scales::GPST>::from_mjd(mjd).into(),
+            TimeScale::GST => Time::<scales::GST>::from_mjd(mjd).into(),
+            TimeScale::QZZST => Time::<scales::QZZST>::from_mjd(mjd).into(),
             TimeScale::TAI => Time::<scales::TAI>::from_mjd(mjd).into(),
             TimeScale::TCB => Time::<scales::TCB>::from_mjd(mjd).into(),
             TimeScale::TCG => Time::<scales::TCG>::from_mjd(mjd).into(),
@@ -114,7 +138,11 @@ impl AnyTime {
     /// Creates a time from a two-part Julian Date in `scale`.
     pub fn from_split_jd(jd1: f64, jd2: f64, scale: TimeScale) -> Self {
         match scale {
+            TimeScale::BDT => Time::<scales::BDT>::from_split_jd(jd1, jd2).into(),
+            TimeScale::GLONASST => Time::<scales::GLONASST>::from_split_jd(jd1, jd2).into(),
             TimeScale::GPST => Time::<scales::GPST>::from_split_jd(jd1, jd2).into(),
+            TimeScale::GST => Time::<scales::GST>::from_split_jd(jd1, jd2).into(),
+            TimeScale::QZZST => Time::<scales::QZZST>::from_split_jd(jd1, jd2).into(),
             TimeScale::TAI => Time::<scales::TAI>::from_split_jd(jd1, jd2).into(),
             TimeScale::TCB => Time::<scales::TCB>::from_split_jd(jd1, jd2).into(),
             TimeScale::TCG => Time::<scales::TCG>::from_split_jd(jd1, jd2).into(),
@@ -153,6 +181,30 @@ impl AnyTime {
 impl From<Time<scales::GPST>> for AnyTime {
     fn from(time: Time<scales::GPST>) -> Self {
         Self::GPST(time)
+    }
+}
+
+impl From<Time<scales::BDT>> for AnyTime {
+    fn from(time: Time<scales::BDT>) -> Self {
+        Self::BDT(time)
+    }
+}
+
+impl From<Time<scales::GLONASST>> for AnyTime {
+    fn from(time: Time<scales::GLONASST>) -> Self {
+        Self::GLONASST(time)
+    }
+}
+
+impl From<Time<scales::GST>> for AnyTime {
+    fn from(time: Time<scales::GST>) -> Self {
+        Self::GST(time)
+    }
+}
+
+impl From<Time<scales::QZZST>> for AnyTime {
+    fn from(time: Time<scales::QZZST>) -> Self {
+        Self::QZZST(time)
     }
 }
 
@@ -225,7 +277,11 @@ impl PartialOrd for AnyTime {
 impl Ord for AnyTime {
     fn cmp(&self, other: &Self) -> Ordering {
         match self {
+            Self::BDT(lhs) => lhs.cmp(&other.clone().bdt()),
+            Self::GLONASST(lhs) => lhs.cmp(&other.clone().glonasst()),
             Self::GPST(lhs) => lhs.cmp(&other.clone().gpst()),
+            Self::GST(lhs) => lhs.cmp(&other.clone().gst()),
+            Self::QZZST(lhs) => lhs.cmp(&other.clone().qzzst()),
             Self::TAI(lhs) => lhs.cmp(&other.clone().tai()),
             Self::TCB(lhs) => lhs.cmp(&other.clone().tcb()),
             Self::TCG(lhs) => lhs.cmp(&other.clone().tcg()),
@@ -253,7 +309,11 @@ mod tests {
         let _: Time<scales::UTC> = any_time.clone().into();
 
         let variants = [
+            AnyTime::BDT(Time::<scales::BDT>::from_jd(2400000.5)),
+            AnyTime::GLONASST(Time::<scales::GLONASST>::from_jd(2400000.5)),
             AnyTime::GPST(Time::<scales::GPST>::from_jd(2400000.5)),
+            AnyTime::GST(Time::<scales::GST>::from_jd(2400000.5)),
+            AnyTime::QZZST(Time::<scales::QZZST>::from_jd(2400000.5)),
             any_time,
             AnyTime::TCB(Time::<scales::TCB>::from_jd(2400000.5)),
             AnyTime::TCG(Time::<scales::TCG>::from_jd(2400000.5)),
@@ -338,9 +398,38 @@ mod tests {
     }
 
     #[test]
+    fn test_gnss_constructors() {
+        let datetime = NaiveDate::from_ymd_opt(2000, 1, 1)
+            .unwrap()
+            .and_hms_nano_opt(12, 0, 0, 123_456_789)
+            .unwrap();
+        let scales = [
+            TimeScale::BDT,
+            TimeScale::GLONASST,
+            TimeScale::GPST,
+            TimeScale::GST,
+            TimeScale::QZZST,
+        ];
+
+        for scale in scales {
+            assert_eq!(AnyTime::from_datetime(datetime, scale).scale(), scale);
+            assert_eq!(AnyTime::from_jd(2_451_545.0, scale).scale(), scale);
+            assert_eq!(AnyTime::from_mjd(51_544.5, scale).scale(), scale);
+            assert_eq!(
+                AnyTime::from_split_jd(2_451_545.0, 0.25, scale).scale(),
+                scale
+            );
+        }
+    }
+
+    #[test]
     fn test_scale() {
         let times = [
+            AnyTime::from_jd(2_451_545.0, TimeScale::BDT),
+            AnyTime::from_jd(2_451_545.0, TimeScale::GLONASST),
             AnyTime::from_jd(2_451_545.0, TimeScale::GPST),
+            AnyTime::from_jd(2_451_545.0, TimeScale::GST),
+            AnyTime::from_jd(2_451_545.0, TimeScale::QZZST),
             AnyTime::from_jd(2_451_545.0, TimeScale::TAI),
             AnyTime::from_jd(2_451_545.0, TimeScale::TCB),
             AnyTime::from_jd(2_451_545.0, TimeScale::TCG),
@@ -350,7 +439,11 @@ mod tests {
             AnyTime::from_jd(2_451_545.0, TimeScale::UTC),
         ];
         let scales = [
+            TimeScale::BDT,
+            TimeScale::GLONASST,
             TimeScale::GPST,
+            TimeScale::GST,
+            TimeScale::QZZST,
             TimeScale::TAI,
             TimeScale::TCB,
             TimeScale::TCG,
@@ -394,7 +487,11 @@ mod tests {
         assert_eq!(later.cmp(&same), Ordering::Greater);
 
         let variants = [
+            AnyTime::BDT(Time::<scales::BDT>::new(TimeDelta::seconds(100))),
+            AnyTime::GLONASST(Time::<scales::GLONASST>::new(TimeDelta::seconds(100))),
             AnyTime::GPST(Time::<scales::GPST>::new(TimeDelta::seconds(100))),
+            AnyTime::GST(Time::<scales::GST>::new(TimeDelta::seconds(100))),
+            AnyTime::QZZST(Time::<scales::QZZST>::new(TimeDelta::seconds(100))),
             AnyTime::TAI(Time::<scales::TAI>::new(TimeDelta::seconds(100))),
             AnyTime::TCB(Time::<scales::TCB>::new(TimeDelta::seconds(100))),
             AnyTime::TCG(Time::<scales::TCG>::new(TimeDelta::seconds(100))),
