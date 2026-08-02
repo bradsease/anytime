@@ -164,6 +164,18 @@ impl AnyTimeSeries {
         }
     }
 
+    /// Converts every value to `scale` and returns a runtime-scale series.
+    ///
+    /// Stored order and length are preserved. When the series already uses the
+    /// requested scale, it is returned unchanged.
+    pub fn convert(self, scale: TimeScale) -> Self {
+        if self.scale() == scale {
+            return self;
+        }
+
+        Self::from_times(self, scale)
+    }
+
     /// Returns the number of time values in the series.
     pub fn len(&self) -> usize {
         with_series!(self, |series| series.len())
@@ -374,6 +386,52 @@ mod tests {
             series.iter().collect::<Vec<_>>(),
             vec![AnyTime::TAI(tai(0)), AnyTime::TAI(tai(0))]
         );
+    }
+
+    #[test]
+    fn converts_to_a_runtime_selected_scale() {
+        let scales = [
+            TimeScale::BDT,
+            TimeScale::GLONASST,
+            TimeScale::GPST,
+            TimeScale::GST,
+            TimeScale::QZZST,
+            TimeScale::TAI,
+            TimeScale::TCB,
+            TimeScale::TCG,
+            TimeScale::TDB,
+            TimeScale::TT,
+            TimeScale::UT1,
+            TimeScale::UTC,
+        ];
+
+        for scale in scales {
+            let series: AnyTimeSeries = TimeSeries::new(vec![tai(0), tai(1)]).into();
+            let converted = series.convert(scale);
+
+            assert_eq!(converted.scale(), scale);
+            assert_eq!(converted.len(), 2);
+            assert_eq!(
+                converted.iter().collect::<Vec<_>>(),
+                vec![
+                    AnyTime::TAI(tai(0)).convert(scale),
+                    AnyTime::TAI(tai(1)).convert(scale)
+                ]
+            );
+        }
+    }
+
+    #[test]
+    fn convert_preserves_an_empty_series_scale() {
+        let series = AnyTimeSeries::from_times(Vec::new(), TimeScale::TAI);
+
+        let utc = series.convert(TimeScale::UTC);
+        assert_eq!(utc.scale(), TimeScale::UTC);
+        assert!(utc.is_empty());
+
+        let utc = utc.convert(TimeScale::UTC);
+        assert_eq!(utc.scale(), TimeScale::UTC);
+        assert!(utc.is_empty());
     }
 
     #[test]
