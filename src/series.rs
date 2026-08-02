@@ -184,6 +184,19 @@ impl<S> TimeSeries<S> {
         self.times.iter()
     }
 
+    /// Iterates over signed physical intervals between adjacent stored times.
+    ///
+    /// A series with fewer than two values yields no intervals. Intervals can
+    /// be negative when the stored times are not in ascending order.
+    pub fn intervals(&self) -> impl Iterator<Item = TimeDelta> + '_
+    where
+        Time<S>: Into<Time<TAI>>,
+    {
+        self.times
+            .windows(2)
+            .map(|pair| pair[1].clone() - pair[0].clone())
+    }
+
     /// Returns the elapsed physical duration from the earliest to latest time.
     ///
     /// Empty and singleton series have zero duration.
@@ -445,6 +458,30 @@ mod tests {
         let series = TimeSeries::new(vec![tai(0), tai(1)]);
         assert_eq!(series.iter().count(), 2);
         assert_eq!(series.into_iter().count(), 2);
+    }
+
+    #[test]
+    fn intervals_follow_stored_order() {
+        let series = TimeSeries::new(vec![tai(0), tai(2), tai(1)]);
+
+        assert_eq!(
+            series.intervals().collect::<Vec<_>>(),
+            vec![TimeDelta::seconds(2), TimeDelta::seconds(-1)]
+        );
+        assert_eq!(TimeSeries::new(vec![tai(0)]).intervals().count(), 0);
+        assert_eq!(TimeSeries::<TAI>::new(vec![]).intervals().count(), 0);
+    }
+
+    #[test]
+    fn intervals_measure_physical_time_across_utc_leap_seconds() {
+        let start = Time::<UTC>::from_isot_str("2016-12-31T00:00:00").unwrap();
+        let end = Time::<UTC>::from_isot_str("2017-01-01T00:00:00").unwrap();
+        let series = TimeSeries::new(vec![start, end]);
+
+        assert_eq!(
+            series.intervals().collect::<Vec<_>>(),
+            vec![TimeDelta::seconds(86_401)]
+        );
     }
 
     #[cfg(feature = "serde")]
