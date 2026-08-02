@@ -55,9 +55,9 @@
 //! # assert_eq!(utc, AnyTime::from_jd(2_451_545.0, TimeScale::UTC));
 //! ```
 //!
-//! The crate supports UTC, TAI, GPST, TT, TCG, TCB, TDB, and UT1. UTC conversions
-//! use leap-second data built into the crate. UT1 conversions additionally use
-//! Earth-orientation data loaded with [`load_finals2000a`].
+//! The crate supports UTC, TAI, BDT, GLONASST, GPST, GST, QZZST, TT, TCG, TCB,
+//! TDB, and UT1. UTC conversions use leap-second data built into the crate. UT1
+//! conversions additionally use Earth-orientation data loaded with [`load_finals2000a`].
 //!
 //! # Feature overview
 //!
@@ -91,7 +91,8 @@ mod time;
 pub use anytime::{AnyTime, AnyTimeVec};
 pub use eop::{load_finals2000a, FinalsLoadError};
 pub use scales::{
-    TimeScale, TimeScaleParseError, GPS, GPST, TAI, TCB, TCG, TDB, TDT, TT, UT, UT1, UTC,
+    TimeScale, TimeScaleParseError, BDT, GLONASST, GPS, GPST, GST, QZZST, TAI, TCB, TCG, TDB, TDT,
+    TT, UT, UT1, UTC,
 };
 pub use series::{TimeSeries, TimeSeriesRange};
 pub use time::{Scale, Time};

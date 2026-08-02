@@ -280,7 +280,11 @@ impl<S> Ord for Time<S> {
     }
 }
 
+impl_to_scale!(scales::BDT, bdt);
+impl_to_scale!(scales::GLONASST, glonasst);
 impl_to_scale!(scales::GPST, gpst);
+impl_to_scale!(scales::GST, gst);
+impl_to_scale!(scales::QZZST, qzzst);
 impl_to_scale!(scales::TAI, tai);
 impl_to_scale!(scales::TCB, tcb);
 impl_to_scale!(scales::TCG, tcg);
