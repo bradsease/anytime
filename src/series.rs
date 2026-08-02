@@ -113,6 +113,24 @@ impl<S> TimeSeries<S> {
     }
 }
 
+impl<S, T> From<Vec<Time<S>>> for TimeSeries<T>
+where
+    Time<S>: Into<Time<T>>,
+{
+    fn from(times: Vec<Time<S>>) -> Self {
+        Self::new(times.into_iter().map(|time| time.into()).collect())
+    }
+}
+
+impl<S> From<Vec<crate::AnyTime>> for TimeSeries<S>
+where
+    Time<S>: From<crate::AnyTime>,
+{
+    fn from(times: Vec<crate::AnyTime>) -> Self {
+        Self::new(times.into_iter().map(Into::into).collect())
+    }
+}
+
 impl<S> IntoIterator for TimeSeries<S> {
     type Item = Time<S>;
     type IntoIter = std::vec::IntoIter<Time<S>>;
@@ -256,6 +274,21 @@ mod tests {
 
         assert_eq!(utc.len(), 2);
         assert_eq!(utc.duration(), TimeDelta::seconds(1));
+    }
+
+    #[test]
+    fn vec_of_times_converts_to_a_series_in_the_target_scale() {
+        let utc: TimeSeries<UTC> = vec![tai(0), tai(1)].into();
+
+        assert_eq!(utc.as_slice(), &[tai(0).utc(), tai(1).utc()]);
+    }
+
+    #[test]
+    fn vec_of_any_times_converts_to_a_series_in_the_target_scale() {
+        let utc: TimeSeries<UTC> =
+            vec![crate::AnyTime::TAI(tai(0)), crate::AnyTime::TAI(tai(1))].into();
+
+        assert_eq!(utc.as_slice(), &[tai(0).utc(), tai(1).utc()]);
     }
 
     #[test]
