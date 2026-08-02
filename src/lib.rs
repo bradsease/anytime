@@ -116,7 +116,7 @@ pub mod scales;
 mod series;
 mod time;
 
-pub use any_series::AnyTimeSeries;
+pub use any_series::{AnyTimeSeries, AnyTimeSeriesIntoIter, AnyTimeSeriesIter};
 pub use anytime::{AnyTime, AnyTimeVec};
 pub use eop::{load_finals2000a, FinalsLoadError};
 pub use scales::{

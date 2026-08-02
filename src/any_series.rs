@@ -47,6 +47,42 @@ pub enum AnyTimeSeries {
     UTC(TimeSeries<scales::UTC>),
 }
 
+/// An iterator that borrows an [`AnyTimeSeries`] and yields [`AnyTime`] values.
+pub struct AnyTimeSeriesIter<'a>(AnyTimeSeriesIterInner<'a>);
+
+enum AnyTimeSeriesIterInner<'a> {
+    BDT(std::slice::Iter<'a, crate::Time<scales::BDT>>),
+    GLONASST(std::slice::Iter<'a, crate::Time<scales::GLONASST>>),
+    GPST(std::slice::Iter<'a, crate::Time<scales::GPST>>),
+    GST(std::slice::Iter<'a, crate::Time<scales::GST>>),
+    QZZST(std::slice::Iter<'a, crate::Time<scales::QZZST>>),
+    TAI(std::slice::Iter<'a, crate::Time<scales::TAI>>),
+    TCB(std::slice::Iter<'a, crate::Time<scales::TCB>>),
+    TCG(std::slice::Iter<'a, crate::Time<scales::TCG>>),
+    TDB(std::slice::Iter<'a, crate::Time<scales::TDB>>),
+    TT(std::slice::Iter<'a, crate::Time<scales::TT>>),
+    UT1(std::slice::Iter<'a, crate::Time<scales::UT1>>),
+    UTC(std::slice::Iter<'a, crate::Time<scales::UTC>>),
+}
+
+/// An owning iterator over values in an [`AnyTimeSeries`].
+pub struct AnyTimeSeriesIntoIter(AnyTimeSeriesIntoIterInner);
+
+enum AnyTimeSeriesIntoIterInner {
+    BDT(std::vec::IntoIter<crate::Time<scales::BDT>>),
+    GLONASST(std::vec::IntoIter<crate::Time<scales::GLONASST>>),
+    GPST(std::vec::IntoIter<crate::Time<scales::GPST>>),
+    GST(std::vec::IntoIter<crate::Time<scales::GST>>),
+    QZZST(std::vec::IntoIter<crate::Time<scales::QZZST>>),
+    TAI(std::vec::IntoIter<crate::Time<scales::TAI>>),
+    TCB(std::vec::IntoIter<crate::Time<scales::TCB>>),
+    TCG(std::vec::IntoIter<crate::Time<scales::TCG>>),
+    TDB(std::vec::IntoIter<crate::Time<scales::TDB>>),
+    TT(std::vec::IntoIter<crate::Time<scales::TT>>),
+    UT1(std::vec::IntoIter<crate::Time<scales::UT1>>),
+    UTC(std::vec::IntoIter<crate::Time<scales::UTC>>),
+}
+
 impl AnyTimeSeries {
     /// Creates a series by converting all values to `scale`.
     ///
@@ -190,42 +226,84 @@ impl AnyTimeSeries {
     ///
     /// Values are returned as owned [`AnyTime`] instances because the concrete
     /// type of a borrowed [`crate::Time`] depends on the runtime-selected scale.
-    pub fn iter(&self) -> Box<dyn Iterator<Item = AnyTime> + '_> {
-        match self {
-            Self::BDT(series) => Box::new(series.iter().cloned().map(Into::into)),
-            Self::GLONASST(series) => Box::new(series.iter().cloned().map(Into::into)),
-            Self::GPST(series) => Box::new(series.iter().cloned().map(Into::into)),
-            Self::GST(series) => Box::new(series.iter().cloned().map(Into::into)),
-            Self::QZZST(series) => Box::new(series.iter().cloned().map(Into::into)),
-            Self::TAI(series) => Box::new(series.iter().cloned().map(Into::into)),
-            Self::TCB(series) => Box::new(series.iter().cloned().map(Into::into)),
-            Self::TCG(series) => Box::new(series.iter().cloned().map(Into::into)),
-            Self::TDB(series) => Box::new(series.iter().cloned().map(Into::into)),
-            Self::TT(series) => Box::new(series.iter().cloned().map(Into::into)),
-            Self::UT1(series) => Box::new(series.iter().cloned().map(Into::into)),
-            Self::UTC(series) => Box::new(series.iter().cloned().map(Into::into)),
+    pub fn iter(&self) -> AnyTimeSeriesIter<'_> {
+        AnyTimeSeriesIter(match self {
+            Self::BDT(series) => AnyTimeSeriesIterInner::BDT(series.iter()),
+            Self::GLONASST(series) => AnyTimeSeriesIterInner::GLONASST(series.iter()),
+            Self::GPST(series) => AnyTimeSeriesIterInner::GPST(series.iter()),
+            Self::GST(series) => AnyTimeSeriesIterInner::GST(series.iter()),
+            Self::QZZST(series) => AnyTimeSeriesIterInner::QZZST(series.iter()),
+            Self::TAI(series) => AnyTimeSeriesIterInner::TAI(series.iter()),
+            Self::TCB(series) => AnyTimeSeriesIterInner::TCB(series.iter()),
+            Self::TCG(series) => AnyTimeSeriesIterInner::TCG(series.iter()),
+            Self::TDB(series) => AnyTimeSeriesIterInner::TDB(series.iter()),
+            Self::TT(series) => AnyTimeSeriesIterInner::TT(series.iter()),
+            Self::UT1(series) => AnyTimeSeriesIterInner::UT1(series.iter()),
+            Self::UTC(series) => AnyTimeSeriesIterInner::UTC(series.iter()),
+        })
+    }
+}
+
+impl Iterator for AnyTimeSeriesIter<'_> {
+    type Item = AnyTime;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &mut self.0 {
+            AnyTimeSeriesIterInner::BDT(iter) => iter.next().cloned().map(Into::into),
+            AnyTimeSeriesIterInner::GLONASST(iter) => iter.next().cloned().map(Into::into),
+            AnyTimeSeriesIterInner::GPST(iter) => iter.next().cloned().map(Into::into),
+            AnyTimeSeriesIterInner::GST(iter) => iter.next().cloned().map(Into::into),
+            AnyTimeSeriesIterInner::QZZST(iter) => iter.next().cloned().map(Into::into),
+            AnyTimeSeriesIterInner::TAI(iter) => iter.next().cloned().map(Into::into),
+            AnyTimeSeriesIterInner::TCB(iter) => iter.next().cloned().map(Into::into),
+            AnyTimeSeriesIterInner::TCG(iter) => iter.next().cloned().map(Into::into),
+            AnyTimeSeriesIterInner::TDB(iter) => iter.next().cloned().map(Into::into),
+            AnyTimeSeriesIterInner::TT(iter) => iter.next().cloned().map(Into::into),
+            AnyTimeSeriesIterInner::UT1(iter) => iter.next().cloned().map(Into::into),
+            AnyTimeSeriesIterInner::UTC(iter) => iter.next().cloned().map(Into::into),
         }
     }
 }
 
 impl IntoIterator for AnyTimeSeries {
     type Item = AnyTime;
-    type IntoIter = Box<dyn Iterator<Item = AnyTime>>;
+    type IntoIter = AnyTimeSeriesIntoIter;
 
     fn into_iter(self) -> Self::IntoIter {
-        match self {
-            Self::BDT(series) => Box::new(series.into_iter().map(Into::into)),
-            Self::GLONASST(series) => Box::new(series.into_iter().map(Into::into)),
-            Self::GPST(series) => Box::new(series.into_iter().map(Into::into)),
-            Self::GST(series) => Box::new(series.into_iter().map(Into::into)),
-            Self::QZZST(series) => Box::new(series.into_iter().map(Into::into)),
-            Self::TAI(series) => Box::new(series.into_iter().map(Into::into)),
-            Self::TCB(series) => Box::new(series.into_iter().map(Into::into)),
-            Self::TCG(series) => Box::new(series.into_iter().map(Into::into)),
-            Self::TDB(series) => Box::new(series.into_iter().map(Into::into)),
-            Self::TT(series) => Box::new(series.into_iter().map(Into::into)),
-            Self::UT1(series) => Box::new(series.into_iter().map(Into::into)),
-            Self::UTC(series) => Box::new(series.into_iter().map(Into::into)),
+        AnyTimeSeriesIntoIter(match self {
+            Self::BDT(series) => AnyTimeSeriesIntoIterInner::BDT(series.into_iter()),
+            Self::GLONASST(series) => AnyTimeSeriesIntoIterInner::GLONASST(series.into_iter()),
+            Self::GPST(series) => AnyTimeSeriesIntoIterInner::GPST(series.into_iter()),
+            Self::GST(series) => AnyTimeSeriesIntoIterInner::GST(series.into_iter()),
+            Self::QZZST(series) => AnyTimeSeriesIntoIterInner::QZZST(series.into_iter()),
+            Self::TAI(series) => AnyTimeSeriesIntoIterInner::TAI(series.into_iter()),
+            Self::TCB(series) => AnyTimeSeriesIntoIterInner::TCB(series.into_iter()),
+            Self::TCG(series) => AnyTimeSeriesIntoIterInner::TCG(series.into_iter()),
+            Self::TDB(series) => AnyTimeSeriesIntoIterInner::TDB(series.into_iter()),
+            Self::TT(series) => AnyTimeSeriesIntoIterInner::TT(series.into_iter()),
+            Self::UT1(series) => AnyTimeSeriesIntoIterInner::UT1(series.into_iter()),
+            Self::UTC(series) => AnyTimeSeriesIntoIterInner::UTC(series.into_iter()),
+        })
+    }
+}
+
+impl Iterator for AnyTimeSeriesIntoIter {
+    type Item = AnyTime;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        match &mut self.0 {
+            AnyTimeSeriesIntoIterInner::BDT(iter) => iter.next().map(Into::into),
+            AnyTimeSeriesIntoIterInner::GLONASST(iter) => iter.next().map(Into::into),
+            AnyTimeSeriesIntoIterInner::GPST(iter) => iter.next().map(Into::into),
+            AnyTimeSeriesIntoIterInner::GST(iter) => iter.next().map(Into::into),
+            AnyTimeSeriesIntoIterInner::QZZST(iter) => iter.next().map(Into::into),
+            AnyTimeSeriesIntoIterInner::TAI(iter) => iter.next().map(Into::into),
+            AnyTimeSeriesIntoIterInner::TCB(iter) => iter.next().map(Into::into),
+            AnyTimeSeriesIntoIterInner::TCG(iter) => iter.next().map(Into::into),
+            AnyTimeSeriesIntoIterInner::TDB(iter) => iter.next().map(Into::into),
+            AnyTimeSeriesIntoIterInner::TT(iter) => iter.next().map(Into::into),
+            AnyTimeSeriesIntoIterInner::UT1(iter) => iter.next().map(Into::into),
+            AnyTimeSeriesIntoIterInner::UTC(iter) => iter.next().map(Into::into),
         }
     }
 }
@@ -303,15 +381,17 @@ mod tests {
         assert_eq!(series.duration(), TimeDelta::seconds(2));
         assert_eq!(series.first(), Some(AnyTime::TAI(tai(2))));
         assert_eq!(series.last(), Some(AnyTime::TAI(tai(1))));
+        let iter: AnyTimeSeriesIter<'_> = series.iter();
         assert_eq!(
-            series.iter().collect::<Vec<_>>(),
+            iter.collect::<Vec<_>>(),
             vec![
                 AnyTime::TAI(tai(2)),
                 AnyTime::TAI(tai(0)),
                 AnyTime::TAI(tai(1))
             ]
         );
-        assert_eq!(series.into_iter().count(), 3);
+        let into_iter: AnyTimeSeriesIntoIter = series.into_iter();
+        assert_eq!(into_iter.count(), 3);
     }
 
     #[test]
