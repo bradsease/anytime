@@ -1,3 +1,4 @@
+use crate::eop::utc_from_ut1;
 use crate::macros::{impl_from_anytime, impl_time_series_from};
 use crate::scales::{GPST, TAI, TCB, TCG, TDB, TT, UT1};
 use crate::{Scale, Time};
@@ -72,13 +73,13 @@ impl_time_series_from!(TT => UTC);
 
 impl From<Time<UT1>> for Time<UTC> {
     fn from(ut1: Time<UT1>) -> Self {
-        let mut utc = ut1.shift_scale_secs::<UTC>(0.0);
-
-        for _ in 0..3 {
-            let guessed_ut1: Time<UT1> = utc.clone().into();
-            utc.value += ut1.value - guessed_ut1.value;
-        }
-
+        let Ok(utc) = utc_from_ut1(ut1.value) else {
+            return Time::new(ut1.value);
+        };
+        let mut utc = Time::new(utc);
+        let round_trip: Time<UT1> = utc.clone().into();
+        // Preserve exact closure when interpolation lands beside a nanosecond boundary.
+        utc.value += ut1.value - round_trip.value;
         utc
     }
 }

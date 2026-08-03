@@ -5,6 +5,9 @@ use std::io::{self, BufRead, BufReader};
 use std::path::Path;
 use std::sync::RwLock;
 
+use crate::constants::{DAY_SECONDS, JD_TO_MJD};
+use chrono::TimeDelta;
+
 /// A measured or predicted Earth-orientation value from finals2000A.all.
 ///
 /// Missing fields are represented by `None`. The angular quantities are in
@@ -39,6 +42,8 @@ struct Finals2000ARecord {
 struct Finals2000AData {
     first_mjd: i64,
     records: Vec<Finals2000ARecord>,
+    // Matching (UT1, UTC) record times for reverse interpolation.
+    ut1_records: Vec<(TimeDelta, TimeDelta)>,
 }
 
 /// Indicates whether an Earth-orientation value is observed or predicted.
@@ -53,6 +58,7 @@ enum DataStatus {
 static FINALS2000A_DATA: RwLock<Finals2000AData> = RwLock::new(Finals2000AData {
     first_mjd: 0,
     records: Vec::new(),
+    ut1_records: Vec::new(),
 });
 
 /// Errors encountered while loading finals2000A.all.
@@ -174,6 +180,38 @@ pub(crate) fn sample_ut1_minus_utc(mjd: f64) -> Result<f64, EopError> {
     sample_ut1_minus_utc_from_data(&data, mjd)
 }
 
+/// Interpolate UTC using a time expressed in UT1.
+pub(crate) fn utc_from_ut1(ut1: TimeDelta) -> Result<TimeDelta, EopError> {
+    let data = FINALS2000A_DATA
+        .read()
+        .map_err(|_| EopError::LockPoisoned)?;
+
+    if data.ut1_records.is_empty() {
+        return Err(EopError::Empty);
+    }
+
+    let index = data.ut1_records.partition_point(|record| record.0 <= ut1);
+    let Some(previous) = index
+        .checked_sub(1)
+        .and_then(|index| data.ut1_records.get(index))
+    else {
+        return Err(EopError::OutOfRange);
+    };
+    if previous.0 == ut1 {
+        return Ok(previous.1);
+    }
+
+    let next = data.ut1_records.get(index).ok_or(EopError::OutOfRange)?;
+    let elapsed = ut1 - previous.0;
+    let interval = next.0 - previous.0;
+    let utc_interval = next.1 - previous.1;
+    let elapsed = elapsed.num_seconds() as f64 * 1e9 + elapsed.subsec_nanos() as f64;
+    let interval = interval.num_seconds() as f64 * 1e9 + interval.subsec_nanos() as f64;
+    let utc_interval = utc_interval.num_seconds() as f64 * 1e9 + utc_interval.subsec_nanos() as f64;
+    let utc_elapsed = (elapsed / interval * utc_interval).round() as i64;
+    Ok(previous.1 + TimeDelta::nanoseconds(utc_elapsed))
+}
+
 fn sample_ut1_minus_utc_from_data(data: &Finals2000AData, mjd: f64) -> Result<f64, EopError> {
     if !mjd.is_finite() {
         return Err(EopError::InvalidMjd);
@@ -263,7 +301,22 @@ where
         records.push(record);
     }
 
-    Ok(Finals2000AData { first_mjd, records })
+    let ut1_records = records
+        .iter()
+        .filter_map(|record| {
+            record.ut1_minus_utc.map(|offset| {
+                let utc = TimeDelta::seconds(((record.mjd + JD_TO_MJD) * DAY_SECONDS) as i64);
+                let ut1 = utc + TimeDelta::nanoseconds((offset * 1e9).round() as i64);
+                (ut1, utc)
+            })
+        })
+        .collect();
+
+    Ok(Finals2000AData {
+        first_mjd,
+        records,
+        ut1_records,
+    })
 }
 
 fn parse_record(line: &str, line_number: usize) -> Result<Finals2000ARecord, FinalsLoadError> {
@@ -487,6 +540,7 @@ mod tests {
                 test_record(101.0, None),
                 test_record(102.0, Some(1.2)),
             ],
+            ut1_records: Vec::new(),
         };
 
         assert_eq!(sample_ut1_minus_utc_from_data(&data, 100.0), Ok(1.0));
