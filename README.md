@@ -106,11 +106,15 @@ assert_eq!(utc.len(), 1);
 
 ## Benchmarks
 
-Run the scale conversion benchmarks with Criterion:
+Run the singleton and `TimeSeries` conversion benchmarks with Criterion:
 
 ```bash
 cargo bench --bench scale_conversions
+cargo bench --bench time_series_conversions
 ```
+
+Both targets report element throughput, so their matching scale-pair results can
+be compared directly.
 
 To compare each conversion with the fastest result, run:
 
